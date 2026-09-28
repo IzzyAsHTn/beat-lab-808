@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11110f">
+  <title>808 — Beat Lab</title>
+  <style>
+    :root{color-scheme:dark;--bg:#11110f;--panel:#1b1b18;--line:#393932;--muted:#aaa99e;--text:#f4f0df;--acid:#d8f36a;--orange:#ff8058}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+    main{width:min(100% - 32px,980px);margin:0 auto;padding:48px 0 36px}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--acid);font-weight:700;text-transform:uppercase}h1{font-size:clamp(40px,8vw,76px);line-height:.95;letter-spacing:-.07em;margin:10px 0 12px}h1 span{color:var(--acid)}.intro{color:var(--muted);max-width:590px;margin:0 0 28px}
+    .machine{background:linear-gradient(145deg,#20201b,#171714);border:1px solid #48483e;border-radius:18px;padding:clamp(16px,4vw,30px);box-shadow:0 24px 80px #0007}.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:22px;border-bottom:1px solid var(--line)}.transport{display:flex;align-items:center;gap:12px}.play{background:var(--acid);color:#16170f;border:0;border-radius:10px;font-weight:800;padding:12px 19px;min-width:112px;cursor:pointer}.play:hover{filter:brightness(1.08)}button{font:inherit}.tempo{display:flex;align-items:center;gap:10px;color:var(--muted)}.tempo input{accent-color:var(--acid);width:min(27vw,170px)}.bpm{color:var(--text);font-variant-numeric:tabular-nums;font-weight:700;min-width:50px}.swing{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}.swing input{accent-color:var(--acid)}
+    .seq{padding-top:20px;overflow-x:auto}.grid{min-width:610px}.step-head,.track{display:grid;grid-template-columns:92px repeat(16,minmax(22px,1fr));gap:6px;align-items:center}.step-head{margin-bottom:9px;color:#77776c;font:11px ui-monospace,monospace;text-align:center}.step-head div:nth-child(4n + 2){color:var(--acid)}.track{margin:10px 0}.name{font-size:12px;font-weight:750;letter-spacing:.06em;color:#c7c5b7}.name small{display:block;font-size:10px;color:#77776c;font-weight:500;letter-spacing:0}.pad{aspect-ratio:1;border:1px solid #44443b;border-radius:5px;background:#292923;cursor:pointer;padding:0;transition:transform .08s,background .08s,border-color .08s}.pad:hover{border-color:#a6ad79}.pad.on{background:var(--tone);border-color:var(--tone);box-shadow:0 0 14px color-mix(in srgb,var(--tone) 30%,transparent)}.pad.current{outline:2px solid var(--acid);outline-offset:2px}.divider{position:relative}.divider:after{content:"";position:absolute;right:-4px;top:0;height:100%;width:1px;background:#77776c55;pointer-events:none}.bottom{border-top:1px solid var(--line);margin-top:24px;padding-top:18px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.bottom p{margin:0;color:var(--muted);font-size:12px}.secondary{background:transparent;border:1px solid #55554a;color:var(--text);border-radius:8px;padding:9px 13px;cursor:pointer}.secondary:hover{border-color:var(--acid)}.status{font:11px ui-monospace,monospace;color:var(--acid);min-width:70px}.foot{margin-top:16px;color:#77776c;font-size:11px;text-align:center}
+    @media(max-width:600px){main{padding-top:32px}.machine{padding:15px}.topbar{align-items:flex-start}.tempo{width:100%;justify-content:space-between}.grid{min-width:580px}.step-head,.track{grid-template-columns:74px repeat(16,minmax(21px,1fr));gap:5px}.name{font-size:10px}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Boîte à rythmes · Web Audio · sans installation</div>
+  <h1>808 <span>Beat Lab</span></h1>
+  <p class="intro">Pose une pulsation, joue avec les silences, puis ajoute une guitare par-dessus. Les sons sont synthétisés dans le navigateur : aucun fichier audio à télécharger.</p>
+  <section class="machine" aria-label="Séquenceur de boîte à rythmes">
+    <div class="topbar">
+      <div class="transport"><button class="play" id="play" type="button">▶ Jouer</button><span class="status" id="status">À l’arrêt</span></div>
+      <label class="tempo">TEMPO <input id="tempo" type="range" min="60" max="160" value="96"><span class="bpm"><span id="bpm">96</span> BPM</span></label>
+      <label class="swing"><input id="swing" type="checkbox"> Swing léger</label>
+    </div>
+    <div class="seq"><div class="grid" id="grid"></div></div>
+    <div class="bottom"><p>16 pas = 1 mesure en 4/4 · elle tourne en boucle</p><button class="secondary" id="clear" type="button">Effacer la grille</button></div>
+  </section>
+  <div class="foot">Astuce : commence par grosse caisse sur 1 et 3, caisse claire sur 2 et 4, puis cherche un motif de charley qui te plaît.</div>
+</main>
+<script>
+(() => {
+  const tracks = [
+    {id:'kick',label:'KICK',sub:'grosse caisse',color:'#d8f36a',steps:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0]},
+    {id:'snare',label:'SNARE',sub:'caisse claire',color:'#ff8058',steps:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]},
+    {id:'clap',label:'CLAP',sub:'claquement',color:'#bd91fa',steps:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]},
+    {id:'hat',label:'CLOSED HAT',sub:'charley fermé',color:'#76caff',steps:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]}
+  ];
+  const grid=document.querySelector('#grid'),playButton=document.querySelector('#play'),tempo=document.querySelector('#tempo'),bpm=document.querySelector('#bpm'),swing=document.querySelector('#swing'),status=document.querySelector('#status');
+  const cells=[];
+  const head=document.createElement('div');head.className='step-head';head.innerHTML='<div></div>'+Array.from({length:16},(_,i)=>`<div class="${i%4===0?'divider':''}">${String(i+1).padStart(2,'0')}</div>`).join('');grid.append(head);
+  tracks.forEach((track,ti)=>{const row=document.createElement('div');row.className='track';row.style.setProperty('--tone',track.color);const label=document.createElement('div');label.className='name';label.innerHTML=`${track.label}<small>${track.sub}</small>`;row.append(label);cells[ti]=[];track.steps.forEach((on,si)=>{const pad=document.createElement('button');pad.type='button';pad.className='pad'+(on?' on':'')+(si%4===3&&si<15?' divider':'');pad.setAttribute('aria-label',`${track.label}, pas ${si+1}${on?', activé':', désactivé'}`);pad.setAttribute('aria-pressed',String(Boolean(on)));pad.addEventListener('click',()=>{track.steps[si]=1-track.steps[si];pad.classList.toggle('on',Boolean(track.steps[si]));pad.setAttribute('aria-pressed',String(Boolean(track.steps[si])));pad.setAttribute('aria-label',`${track.label}, pas ${si+1}, ${track.steps[si]?'activé':'désactivé'}`)});cells[ti][si]=pad;row.append(pad)});grid.append(row)});
+  tempo.addEventListener('input',()=>bpm.textContent=tempo.value);
+  let ctx=null,playing=false,step=0,nextTime=0,timer=null;const lookahead=.12,interval=25;
+  function noiseBuffer(){const buffer=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;return buffer}
+  function kick(t){const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(155,t);osc.frequency.exponentialRampToValueAtTime(48,t+.12);gain.gain.setValueAtTime(.95,t);gain.gain.exponentialRampToValueAtTime(.001,t+.48);osc.connect(gain).connect(ctx.destination);osc.start(t);osc.stop(t+.5)}
+  function noiseHit(t,kind){const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();source.buffer=noiseBuffer();source.connect(filter).connect(gain).connect(ctx.destination);if(kind==='snare'){filter.type='highpass';filter.frequency.value=1300;gain.gain.setValueAtTime(.48,t);gain.gain.exponentialRampToValueAtTime(.001,t+.19);source.start(t);source.stop(t+.2);const osc=ctx.createOscillator(),tone=ctx.createGain();osc.type='triangle';osc.frequency.setValueAtTime(190,t);tone.gain.setValueAtTime(.22,t);tone.gain.exponentialRampToValueAtTime(.001,t+.12);osc.connect(tone).connect(ctx.destination);osc.start(t);osc.stop(t+.13)}else if(kind==='clap'){filter.type='bandpass';filter.frequency.value=1700;filter.Q.value=.7;[0,.022,.047,.075].forEach((offset,i)=>{gain.gain.setValueAtTime(.001,t+offset);gain.gain.linearRampToValueAtTime(.3/(i+1),t+offset+.003);gain.gain.exponentialRampToValueAtTime(.001,t+offset+.025)});source.start(t);source.stop(t+.14)}else{filter.type='highpass';filter.frequency.value=7500;gain.gain.setValueAtTime(.2,t);gain.gain.exponentialRampToValueAtTime(.001,t+.055);source.start(t);source.stop(t+.06)}}
+  function schedule(n,t){tracks.forEach((track,ti)=>{if(track.steps[n]){if(track.id==='kick')kick(t);else noiseHit(t,track.id)}});const delay=Math.max(0,(t-ctx.currentTime)*1000);setTimeout(()=>{cells.forEach(row=>row.forEach(cell=>cell.classList.remove('current')));cells.forEach(row=>row[n].classList.add('current'))},delay)}
+  function scheduler(){while(nextTime<ctx.currentTime+lookahead){schedule(step,nextTime);const base=60/Number(tempo.value)/4;nextTime+=base*(swing.checked&&step%2===1?1.12:.88);step=(step+1)%16}}
+  async function start(){try{ctx=ctx||new(window.AudioContext||window.webkitAudioContext)();await ctx.resume();playing=true;step=0;nextTime=ctx.currentTime+.05;timer=setInterval(scheduler,interval);playButton.textContent='■ Arrêter';status.textContent='En lecture'}catch(e){status.textContent='Audio indisponible'}}
+  function stop(){playing=false;clearInterval(timer);timer=null;cells.forEach(row=>row.forEach(cell=>cell.classList.remove('current')));playButton.textContent='▶ Jouer';status.textContent='À l’arrêt'}
+  playButton.addEventListener('click',()=>playing?stop():start());document.querySelector('#clear').addEventListener('click',()=>tracks.forEach((track,ti)=>{track.steps.fill(0);cells[ti].forEach((cell,si)=>{cell.classList.remove('on');cell.setAttribute('aria-pressed','false');cell.setAttribute('aria-label',`${track.label}, pas ${si+1}, désactivé`)})}));
+})();
+</script>
+</body>
+</html>
