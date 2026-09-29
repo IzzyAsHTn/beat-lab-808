@@ -1,1 +1,279 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11110f"><title>Effets audio — Beat Lab</title><style>:root{color-scheme:dark;--bg:#11110f;--panel:#1b1b18;--line:#393932;--muted:#aaa99e;--text:#f4f0df;--acid:#d8f36a;--orange:#ff8058;--blue:#76caff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}main{width:min(100% - 32px,980px);margin:0 auto;padding:38px 0 36px}.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}.nav a{color:var(--muted);text-decoration:none;border:1px solid #48483e;border-radius:999px;padding:8px 13px;font-size:13px}.nav a:hover{border-color:var(--acid);color:var(--text)}.nav a[aria-current=page]{background:var(--acid);color:#17180f;border-color:var(--acid);font-weight:700}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--acid);font-weight:700;text-transform:uppercase}h1{font-size:clamp(40px,8vw,72px);line-height:.95;letter-spacing:-.07em;margin:10px 0 12px}h1 span{color:var(--acid)}.intro{color:var(--muted);max-width:650px;margin:0 0 26px}.intro a{color:var(--blue)}.card{background:linear-gradient(145deg,#20201b,#171714);border:1px solid #48483e;border-radius:18px;padding:clamp(16px,4vw,28px);box-shadow:0 24px 80px #0007}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.btn{border:1px solid #55554a;color:var(--text);background:transparent;border-radius:9px;padding:10px 14px;font:inherit;cursor:pointer}.btn:hover{border-color:var(--acid)}.btn.primary{background:var(--acid);border-color:var(--acid);color:#10140b;font-weight:800}.btn:disabled{opacity:.45;cursor:not-allowed}.status{font:12px ui-monospace,monospace;color:var(--acid)}.field{background:#20201b;border:1px solid #393932;border-radius:10px;padding:12px;color:var(--muted)}.field input[type=range]{accent-color:var(--acid)}.tip{border-top:1px solid var(--line);margin-top:22px;padding-top:16px;color:var(--muted);font-size:12px}.tip strong{color:var(--text)}.foot{margin-top:16px;text-align:center;color:#77776c;font-size:11px}.gridwrap{overflow-x:auto;margin-top:18px}.grid{min-width:650px}.head,.track{display:grid;grid-template-columns:135px repeat(16,1fr);gap:6px;align-items:center}.head{font:11px ui-monospace,monospace;color:#77776c;text-align:center;margin-bottom:9px}.track{margin:12px 0}.tracklabel{color:#cfcdbe;font-size:12px}.tracklabel small{display:block;color:#77776c}.pad{aspect-ratio:1;border:1px solid #44443b;border-radius:5px;background:#292923;cursor:pointer;padding:0}.pad.on{background:var(--tone);border-color:var(--tone);box-shadow:0 0 14px color-mix(in srgb,var(--tone) 30%,transparent)}.pad.current{outline:2px solid white;outline-offset:2px}.file{font:11px inherit;max-width:120px;color:var(--muted)}.effectrow{display:grid;grid-template-columns:150px 1fr 58px;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}.effectrow input[type=range]{width:100%;accent-color:var(--acid)}.effectrow label{font-weight:700}.effectrow output{text-align:right;font:12px ui-monospace,monospace;color:var(--acid)}input[type=file]{max-width:100%;color:var(--muted)}@media(max-width:600px){main{padding-top:26px}.effectrow{grid-template-columns:1fr 52px}.effectrow input{grid-column:1/-1;grid-row:2}.effectrow output{grid-column:2;grid-row:1}.tracklabel{font-size:10px}.head,.track{grid-template-columns:110px repeat(16,22px);gap:5px}</style></head><body><main><nav class="nav" aria-label="Outils musicaux"><a href="./">808 Beat Lab</a><a href="samples.html">Sample Cutter</a><a href="sequencer.html">Séquenceur</a><a href="effects.html" aria-current="page">Effets</a></nav><div class="eyebrow">Traitement audio · effets créatifs · export WAV</div><h1>Audio <span>Effects</span></h1><p class="intro">Charge un son pour l’imprimer en WAV. Pour régler des effets en temps réel sur chaque piste, ouvre le <a href="sequencer.html">Séquenceur</a>. Ici, le rendu est limité à 2 minutes afin d’éviter de saturer la mémoire du navigateur.</p><section class="card"><div class="row"><label class="field">Fichier audio <input id="file" type="file" accept="audio/*"></label><span id="name" class="status">Aucun fichier chargé</span></div><div class="effectrow"><label for="cut">Filtre passe-bas</label><input id="cut" type="range" min="500" max="18000" value="18000"><output id="cutv">18 kHz</output></div><div class="effectrow"><label for="drive">Saturation</label><input id="drive" type="range" min="0" max="100" value="0"><output id="drivev">0%</output></div><div class="effectrow"><label for="delay">Écho</label><input id="delay" type="range" min="0" max="70" value="0"><output id="delayv">0%</output></div><div class="effectrow"><label for="reverb">Réverbération</label><input id="reverb" type="range" min="0" max="70" value="0"><output id="reverbv">0%</output></div><div class="row" style="margin-top:20px"><button id="render" class="btn primary" disabled>Créer le rendu et préparer l’écoute</button><button id="play" class="btn" disabled>▶ Écouter le rendu</button><button id="download" class="btn" disabled>↓ Télécharger le WAV traité</button><span id="status" class="status"></span></div><div class="tip"><strong>Idée :</strong> commence par baisser le filtre, ajoute une légère saturation, puis dose l’écho ou la réverbération pour placer la guitare dans un espace numérique.</div></section><p class="foot">Les fichiers audio ne quittent pas ton appareil. Le WAV rendu peut être importé dans Logic Pro.</p></main><script>(()=>{const $=s=>document.querySelector(s),file=$('#file'),render=$('#render'),play=$('#play'),download=$('#download'),status=$('#status');let inputBuffer=null,rendered=null,player=new Audio(),renderUrl='';function invalidate(){if(renderUrl){player.pause();player.removeAttribute('src');player.load();URL.revokeObjectURL(renderUrl);renderUrl='';rendered=null;play.disabled=true;download.disabled=true;status.textContent='Réglages modifiés · crée un nouveau rendu pour écouter ou télécharger les effets.'}}[['cut','cutv',v=>Number(v)>=1000?(Number(v)/1000).toFixed(Number(v)>=10000?0:1)+' kHz':v+' Hz'],['drive','drivev',v=>v+'%'],['delay','delayv',v=>v+'%'],['reverb','reverbv',v=>v+'%']].forEach(([id,out,fmt])=>$('#'+id).oninput=e=>{$('#'+out).textContent=fmt(e.target.value);invalidate()});file.onchange=async()=>{const f=file.files[0];if(!f)return;player.pause();if(renderUrl){URL.revokeObjectURL(renderUrl);renderUrl=''}inputBuffer=null;rendered=null;render.disabled=true;play.disabled=true;download.disabled=true;status.textContent='Chargement…';let ctx;try{ctx=new(window.AudioContext||window.webkitAudioContext)();const decoded=await ctx.decodeAudioData(await f.arrayBuffer());await ctx.close();ctx=null;if(decoded.duration>120){$('#name').textContent=f.name;status.textContent='Fichier trop long pour ce rendu. Découpe un extrait de 2 minutes maximum dans Sample Cutter.';return}inputBuffer=decoded;$('#name').textContent=f.name;render.disabled=false;status.textContent='Fichier décodé · '+decoded.numberOfChannels+' piste(s) · '+decoded.sampleRate+' Hz · '+decoded.duration.toFixed(2)+' s · règle les effets puis crée le rendu pour écouter'}catch(e){if(ctx)try{await ctx.close()}catch(_){}inputBuffer=null;render.disabled=true;status.textContent='Décodage impossible ('+(e.name||'AudioError')+') : '+(e.message||'format non pris en charge')+'. Essaie un WAV PCM ou un MP3 standard.'}};function curve(amount){const n=44100,c=new Float32Array(n),k=amount*180;for(let i=0;i<n;i++){const x=i*2/n-1;c[i]=(1+k)*x/(1+k*Math.abs(x))}return c}function wav(buf){const ch=Math.min(2,buf.numberOfChannels),frames=buf.length,bytes=frames*ch*2,ab=new ArrayBuffer(44+bytes),v=new DataView(ab);let p=0;const s=x=>{for(let i=0;i<x.length;i++)v.setUint8(p++,x.charCodeAt(i))};s('RIFF');v.setUint32(p,36+bytes,true);p+=4;s('WAVE');s('fmt ');v.setUint32(p,16,true);p+=4;v.setUint16(p,1,true);p+=2;v.setUint16(p,ch,true);p+=2;v.setUint32(p,buf.sampleRate,true);p+=4;v.setUint32(p,buf.sampleRate*ch*2,true);p+=4;v.setUint16(p,ch*2,true);p+=2;v.setUint16(p,16,true);p+=2;s('data');v.setUint32(p,bytes,true);p+=4;for(let i=0;i<frames;i++)for(let c=0;c<ch;c++){let x=Math.max(-1,Math.min(1,buf.getChannelData(c)[i]||0));v.setInt16(p,x<0?x*32768:x*32767,true);p+=2}return new Blob([ab],{type:'audio/wav'})}render.onclick=async()=>{if(!inputBuffer)return;render.disabled=true;play.disabled=true;download.disabled=true;player.pause();if(renderUrl){URL.revokeObjectURL(renderUrl);renderUrl=''};['file','cut','drive','delay','reverb'].forEach(id=>$('#'+id).disabled=true);status.textContent='Application des effets et création du rendu…';try{const delayAmt=Number($('#delay').value)/100,rv=Number($('#reverb').value)/100,tail=(delayAmt||rv)?2.4:0,rate=inputBuffer.sampleRate,length=inputBuffer.length+Math.ceil(tail*rate),Offline=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!Offline)throw Error('Le rendu hors ligne n’est pas disponible dans ce navigateur');const ctx=new Offline(Math.max(1,Math.min(2,inputBuffer.numberOfChannels)),length,rate),src=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),dist=ctx.createWaveShaper(),out=ctx.createGain();src.buffer=inputBuffer;filter.type='lowpass';filter.frequency.value=Number($('#cut').value);filter.Q.value=.7;dist.curve=curve(Number($('#drive').value)/100);dist.oversample='4x';src.connect(filter).connect(dist);const dryGain=ctx.createGain();dryGain.gain.value=1-Math.max(delayAmt,rv)*.45;dist.connect(dryGain).connect(out);if(delayAmt>0){const d=ctx.createDelay(1.2),fb=ctx.createGain(),wet=ctx.createGain();d.delayTime.value=.28;fb.gain.value=.32;wet.gain.value=delayAmt;dist.connect(d);d.connect(fb).connect(d);d.connect(wet).connect(out)}if(rv>0){const conv=ctx.createConvolver(),imp=ctx.createBuffer(2,Math.floor(rate*1.6),rate);for(let c=0;c<2;c++){const a=imp.getChannelData(c);for(let i=0;i<a.length;i++)a[i]=(Math.random()*2-1)*Math.pow(1-i/a.length,3)}conv.buffer=imp;const wet=ctx.createGain();wet.gain.value=rv*.65;dist.connect(conv).connect(wet).connect(out)}out.connect(ctx.destination);src.start();rendered=await ctx.startRendering();let peak=0;for(let c=0;c<rendered.numberOfChannels;c++){const samples=rendered.getChannelData(c);for(let i=0;i<samples.length;i++)peak=Math.max(peak,Math.abs(samples[i]))}if(peak>.891250938){const gain=.891250938/peak;for(let c=0;c<rendered.numberOfChannels;c++){const samples=rendered.getChannelData(c);for(let i=0;i<samples.length;i++)samples[i]*=gain}}if(renderUrl)URL.revokeObjectURL(renderUrl);renderUrl=URL.createObjectURL(wav(rendered));player.src=renderUrl;play.disabled=false;download.disabled=false;status.textContent='Rendu traité prêt · '+rendered.duration.toFixed(2)+' s · WAV PCM 16 bits · prêt à écouter et à télécharger'}catch(e){status.textContent='Erreur pendant le rendu : '+e.message}finally{['file','cut','drive','delay','reverb'].forEach(id=>$('#'+id).disabled=false);render.disabled=false}};play.onclick=async()=>{try{player.currentTime=0;await player.play();status.textContent='Lecture du rendu'}catch(e){status.textContent='Lecture bloquée par le navigateur'}};download.onclick=()=>{if(!renderUrl)return;const a=document.createElement('a');a.href=renderUrl;a.download='beat-lab-effets-traites.wav';a.click()}})();</script></body></html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11110f"><title>Effets audio — Beat Lab</title><style>:root{color-scheme:dark;--bg:#11110f;--panel:#1b1b18;--line:#393932;--muted:#aaa99e;--text:#f4f0df;--acid:#d8f36a;--orange:#ff8058;--blue:#76caff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}main{width:min(100% - 32px,980px);margin:0 auto;padding:38px 0 36px}.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}.nav a{color:var(--muted);text-decoration:none;border:1px solid #48483e;border-radius:999px;padding:8px 13px;font-size:13px}.nav a:hover{border-color:var(--acid);color:var(--text)}.nav a[aria-current=page]{background:var(--acid);color:#17180f;border-color:var(--acid);font-weight:700}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--acid);font-weight:700;text-transform:uppercase}h1{font-size:clamp(40px,8vw,72px);line-height:.95;letter-spacing:-.07em;margin:10px 0 12px}h1 span{color:var(--acid)}.intro{color:var(--muted);max-width:650px;margin:0 0 26px}.intro a{color:var(--blue)}.card{background:linear-gradient(145deg,#20201b,#171714);border:1px solid #48483e;border-radius:18px;padding:clamp(16px,4vw,28px);box-shadow:0 24px 80px #0007}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.btn{border:1px solid #55554a;color:var(--text);background:transparent;border-radius:9px;padding:10px 14px;font:inherit;cursor:pointer}.btn:hover{border-color:var(--acid)}.btn.primary{background:var(--acid);border-color:var(--acid);color:#10140b;font-weight:800}.btn:disabled{opacity:.45;cursor:not-allowed}.status{font:12px ui-monospace,monospace;color:var(--acid)}.field{background:#20201b;border:1px solid #393932;border-radius:10px;padding:12px;color:var(--muted)}.field input[type=range]{accent-color:var(--acid)}.tip{border-top:1px solid var(--line);margin-top:22px;padding-top:16px;color:var(--muted);font-size:12px}.tip strong{color:var(--text)}.foot{margin-top:16px;text-align:center;color:#77776c;font-size:11px}.gridwrap{overflow-x:auto;margin-top:18px}.grid{min-width:650px}.head,.track{display:grid;grid-template-columns:135px repeat(16,1fr);gap:6px;align-items:center}.head{font:11px ui-monospace,monospace;color:#77776c;text-align:center;margin-bottom:9px}.track{margin:12px 0}.tracklabel{color:#cfcdbe;font-size:12px}.tracklabel small{display:block;color:#77776c}.pad{aspect-ratio:1;border:1px solid #44443b;border-radius:5px;background:#292923;cursor:pointer;padding:0}.pad.on{background:var(--tone);border-color:var(--tone);box-shadow:0 0 14px color-mix(in srgb,var(--tone) 30%,transparent)}.pad.current{outline:2px solid white;outline-offset:2px}.file{font:11px inherit;max-width:120px;color:var(--muted)}.effectrow{display:grid;grid-template-columns:150px 1fr 58px;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}.effectrow input[type=range]{width:100%;accent-color:var(--acid)}.effectrow label{font-weight:700}.effectrow output{text-align:right;font:12px ui-monospace,monospace;color:var(--acid)}input[type=file]{max-width:100%;color:var(--muted)}@media(max-width:600px){main{padding-top:26px}.effectrow{grid-template-columns:1fr 52px}.effectrow input{grid-column:1/-1;grid-row:2}.effectrow output{grid-column:2;grid-row:1}.tracklabel{font-size:10px}.head,.track{grid-template-columns:110px repeat(16,22px);gap:5px}</style></head><body><main><nav class="nav" aria-label="Outils musicaux"><a href="./">808 Beat Lab</a><a href="samples.html">Sample Cutter</a><a href="sequencer.html">Séquenceur</a><a href="effects.html" aria-current="page">Effets</a></nav><div class="eyebrow">Traitement audio · effets créatifs · export WAV</div><h1>Audio <span>Effects</span></h1><p class="intro">Charge un son pour l’imprimer en WAV. Pour régler des effets en temps réel sur chaque piste, ouvre le <a href="sequencer.html">Séquenceur</a>. Ici, le rendu est limité à 2 minutes afin d’éviter de saturer la mémoire du navigateur.</p><section class="card"><div class="row"><label class="field">Fichier audio <input id="file" type="file" accept="audio/*"></label><span id="name" class="status">Aucun fichier chargé</span></div><div class="effectrow"><label for="cut">Filtre passe-bas</label><input id="cut" type="range" min="500" max="18000" value="18000"><output id="cutv">18 kHz</output></div><div class="effectrow"><label for="drive">Saturation</label><input id="drive" type="range" min="0" max="100" value="0"><output id="drivev">0%</output></div><div class="effectrow"><label for="delay">Écho</label><input id="delay" type="range" min="0" max="70" value="0"><output id="delayv">0%</output></div><div class="effectrow"><label for="reverb">Réverbération</label><input id="reverb" type="range" min="0" max="70" value="0"><output id="reverbv">0%</output></div><div class="row" style="margin-top:20px"><button id="preview" class="btn" disabled>▶ Préécouter en boucle</button><button id="render" class="btn primary" disabled>Créer le rendu et préparer l’écoute</button><button id="play" class="btn" disabled>▶ Écouter le rendu</button><button id="download" class="btn" disabled>↓ Télécharger le WAV traité</button><span id="status" class="status"></span></div><div class="tip"><strong>Préécoute :</strong> lance le son en boucle puis ajuste les effets en direct. Le rendu WAV reste une étape séparée, à lancer quand le réglage te convient.<br><strong>Idée :</strong> commence par baisser le filtre, ajoute une légère saturation, puis dose l’écho ou la réverbération pour placer la guitare dans un espace numérique.</div></section><p class="foot">Les fichiers audio ne quittent pas ton appareil. Le WAV rendu peut être importé dans Logic Pro.</p></main><script>
+(()=>{
+  const $=selector=>document.querySelector(selector);
+  const file=$('#file'),previewButton=$('#preview'),renderButton=$('#render'),playButton=$('#play'),downloadButton=$('#download'),status=$('#status'),name=$('#name');
+  const controls=['cut','drive','delay','reverb'].map(id=>$('#'+id));
+  let inputBuffer=null,renderedBuffer=null,player=new Audio(),renderUrl='',loadToken=0,renderToken=0,preview=null,previewToken=0;
+  const defaultRenderText='Créer le rendu et préparer l’écoute';
+  const setStatus=message=>{status.textContent=message};
+  function clearRender(message=''){
+    ++renderToken;
+    player.pause();
+    player.removeAttribute('src');
+    player.load();
+    if(renderUrl){URL.revokeObjectURL(renderUrl);renderUrl=''}
+    renderedBuffer=null;
+    playButton.disabled=true;
+    downloadButton.disabled=true;
+    if(message)setStatus(message);
+  }
+  function smoothParam(param,value,context){
+    const now=context.currentTime;
+    if(typeof param.setTargetAtTime==='function')param.setTargetAtTime(value,now,.025);
+    else param.setValueAtTime(value,now);
+  }
+  function updatePreview(){
+    if(!preview)return;
+    const settings={cut:Number($('#cut').value),drive:Number($('#drive').value)/100,delay:Number($('#delay').value)/100,reverb:Number($('#reverb').value)/100};
+    const {context,filter,distortion,dry,delayWet,reverbWet}=preview;
+    smoothParam(filter.frequency,settings.cut,context);
+    distortion.curve=makeDriveCurve(settings.drive);
+    smoothParam(dry.gain,1-Math.max(settings.delay,settings.reverb)*.35,context);
+    if(delayWet)smoothParam(delayWet.gain,settings.delay*.65,context);
+    if(reverbWet)smoothParam(reverbWet.gain,settings.reverb*.65,context);
+  }
+  function stopPreview(message=''){
+    ++previewToken;
+    const active=preview;
+    preview=null;
+    previewButton.textContent='▶ Préécouter en boucle';
+    previewButton.setAttribute('aria-pressed','false');
+    previewButton.disabled=!inputBuffer||renderButton.disabled;
+    if(active){
+      try{active.source.stop()}catch(error){}
+      for(const node of active.nodes)try{node.disconnect()}catch(error){}
+      if(active.context.state!=='closed')active.context.close().catch(error=>console.warn('Fermeture de la préécoute audio',error));
+    }
+    if(message)setStatus(message);
+  }
+  function setPreviewBusy(busy){
+    previewButton.disabled=busy||!inputBuffer||renderButton.disabled;
+    previewButton.textContent=busy?'Préparation de la préécoute…':preview?'■ Arrêter la préécoute':'▶ Préécouter en boucle';
+    previewButton.setAttribute('aria-pressed',String(Boolean(preview)));
+  }
+  function setBusy(busy){
+    file.disabled=busy;
+    controls.forEach(control=>control.disabled=busy);
+    renderButton.disabled=busy||!inputBuffer;
+    renderButton.textContent=busy?'Rendu en cours…':defaultRenderText;
+    setPreviewBusy(busy);
+  }
+  function formatError(action,error){
+    console.error('[Beat Lab Effets] '+action,error);
+    const detail=error&&error.message?error.message:(error&&error.name?error.name:'erreur inconnue');
+    return action+' : '+detail;
+  }
+  const formatters={
+    cut:value=>Number(value)>=1000?(Number(value)/1000).toFixed(Number(value)>=10000?0:1)+' kHz':value+' Hz',
+    drive:value=>value+'%',delay:value=>value+'%',reverb:value=>value+'%'
+  };
+  controls.forEach(control=>control.addEventListener('input',()=>{
+    $('#'+control.id+'v').textContent=formatters[control.id](control.value);
+    if(renderUrl||renderedBuffer){clearRender('Paramètres modifiés · crée un nouveau rendu pour écouter ou télécharger les effets.');}
+    if(preview){updatePreview();setStatus('Préécoute en boucle · effets ajustés en direct.');}
+  }));
+  file.addEventListener('change',async()=>{
+    const selected=file.files&&file.files[0];
+    const token=++loadToken;
+    stopPreview();
+    clearRender();
+    inputBuffer=null;
+    renderButton.disabled=true;
+    name.textContent=selected?selected.name:'Aucun fichier chargé';
+    if(!selected){setStatus('Sélectionne un fichier WAV, AIFF, MP3 ou compatible avec ton navigateur.');return;}
+    setStatus('Chargement et décodage de « '+selected.name+' »…');
+    let decodeContext;
+    try{
+      const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+      if(!AudioContextClass)throw new Error('AudioContext n’est pas disponible dans ce navigateur.');
+      decodeContext=new AudioContextClass();
+      const bytes=await selected.arrayBuffer();
+      const decoded=await decodeContext.decodeAudioData(bytes);
+      if(token!==loadToken)return;
+      if(decoded.duration>120){
+        setStatus('Fichier décodé ('+decoded.duration.toFixed(1)+' s), mais trop long : le rendu est limité à 2 minutes. Découpe un extrait dans Sample Cutter.');
+        return;
+      }
+      inputBuffer=decoded;
+      renderButton.disabled=false;
+      setPreviewBusy(false);
+      setStatus('Fichier prêt · '+decoded.numberOfChannels+' piste(s) · '+decoded.sampleRate+' Hz · '+decoded.duration.toFixed(2)+' s');
+    }catch(error){
+      if(token!==loadToken)return;
+      inputBuffer=null;
+      renderButton.disabled=true;
+      setStatus(formatError('Impossible de décoder ce fichier',error)+' Essaie un WAV PCM ou un MP3 standard.');
+    }finally{
+      if(decodeContext)try{await decodeContext.close()}catch(error){console.warn('Fermeture du décodeur audio',error)}
+    }
+  });
+  function makeDriveCurve(amount){
+    const size=44100,curve=new Float32Array(size),k=amount*180;
+    for(let i=0;i<size;i++){
+      const x=i*2/(size-1)-1;
+      curve[i]=(1+k)*x/(1+k*Math.abs(x));
+    }
+    return curve;
+  }
+  function makeImpulse(context,seconds=1.8){
+    const length=Math.floor(context.sampleRate*seconds),channels=Math.min(2,context.destination.maxChannelCount||2);
+    const impulse=context.createBuffer(channels,length,context.sampleRate);
+    let seed=0x6d2b79f5;
+    for(let channel=0;channel<channels;channel++){
+      const samples=impulse.getChannelData(channel);
+      for(let i=0;i<length;i++){
+        seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;
+        const noise=(seed>>>0)/4294967295*2-1;
+        const decay=Math.pow(1-i/length,3.2);
+        samples[i]=noise*decay*(channel===0?1:.92);
+      }
+    }
+    return impulse;
+  }
+  previewButton.addEventListener('click',async()=>{
+    if(preview){stopPreview('Préécoute arrêtée.');return;}
+    if(!inputBuffer||previewButton.disabled)return;
+    const sourceBuffer=inputBuffer,token=++previewToken;
+    previewButton.disabled=true;
+    previewButton.textContent='Préparation de la préécoute…';
+    try{
+      const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+      if(!AudioContextClass)throw new Error('AudioContext n’est pas disponible dans ce navigateur.');
+      const context=new AudioContextClass();
+      const source=context.createBufferSource(),filter=context.createBiquadFilter(),distortion=context.createWaveShaper(),output=context.createGain();
+      const dry=context.createGain(),nodes=[source,filter,distortion,dry,output];
+      source.buffer=sourceBuffer;source.loop=true;
+      filter.type='lowpass';filter.Q.value=.707;
+      distortion.oversample='4x';
+      source.connect(filter).connect(distortion);
+      distortion.connect(dry).connect(output);
+      const settings={delay:Number($('#delay').value)/100,reverb:Number($('#reverb').value)/100};
+      let delayWet=null,reverbWet=null;
+      {
+        const delay=context.createDelay(1.2),feedback=context.createGain(),damping=context.createBiquadFilter();
+        delayWet=context.createGain();delay.delayTime.value=.28;feedback.gain.value=.32;damping.type='lowpass';damping.frequency.value=5200;
+        delayWet.gain.value=settings.delay*.65;distortion.connect(delay);delay.connect(damping).connect(feedback).connect(delay);delay.connect(delayWet).connect(output);
+        nodes.push(delay,feedback,damping,delayWet);
+      }
+      {
+        const convolver=context.createConvolver();reverbWet=context.createGain();
+        convolver.buffer=makeImpulse(context);reverbWet.gain.value=settings.reverb*.65;
+        distortion.connect(convolver).connect(reverbWet).connect(output);nodes.push(convolver,reverbWet);
+      }
+      const limiter=context.createDynamicsCompressor();
+      limiter.threshold.value=-2;limiter.knee.value=0;limiter.ratio.value=20;limiter.attack.value=.003;limiter.release.value=.12;
+      output.connect(limiter).connect(context.destination);nodes.push(limiter);
+      preview={context,source,filter,distortion,dry,delayWet,reverbWet,nodes};
+      updatePreview();
+      setPreviewBusy(true);
+      await context.resume();
+      if(token!==previewToken||preview?.source!==source){try{source.stop()}catch(error){};return;}
+      source.start(0);
+      setPreviewBusy(false);
+      setStatus('Préécoute en boucle · ajuste les effets en direct.');
+      source.onended=()=>{if(preview?.source===source)stopPreview('Préécoute terminée.');};
+    }catch(error){
+      if(token===previewToken){stopPreview();setStatus(formatError('Préécoute impossible',error)+' Vérifie la sortie audio du navigateur.');}
+    }
+  });
+  function applyOutputCeiling(buffer,ceilingDb=-1){
+    const ceiling=Math.pow(10,ceilingDb/20);
+    let peak=0;
+    for(let channel=0;channel<buffer.numberOfChannels;channel++){
+      const samples=buffer.getChannelData(channel);
+      for(let i=0;i<samples.length;i++)peak=Math.max(peak,Math.abs(samples[i]));
+    }
+    const gain=peak>ceiling?ceiling/peak:1;
+    if(gain<1)for(let channel=0;channel<buffer.numberOfChannels;channel++){
+      const samples=buffer.getChannelData(channel);
+      for(let i=0;i<samples.length;i++)samples[i]*=gain;
+    }
+    return {peak,gain};
+  }
+  function encodeWav(buffer){
+    const channels=Math.min(2,buffer.numberOfChannels),frames=buffer.length,bytesPerSample=2,dataBytes=frames*channels*bytesPerSample;
+    const bytes=new ArrayBuffer(44+dataBytes),view=new DataView(bytes);
+    let offset=0;
+    const writeText=text=>{for(let i=0;i<text.length;i++)view.setUint8(offset++,text.charCodeAt(i));};
+    writeText('RIFF');view.setUint32(offset,36+dataBytes,true);offset+=4;
+    writeText('WAVE');writeText('fmt ');view.setUint32(offset,16,true);offset+=4;
+    view.setUint16(offset,1,true);offset+=2;view.setUint16(offset,channels,true);offset+=2;
+    view.setUint32(offset,buffer.sampleRate,true);offset+=4;view.setUint32(offset,buffer.sampleRate*channels*bytesPerSample,true);offset+=4;
+    view.setUint16(offset,channels*bytesPerSample,true);offset+=2;view.setUint16(offset,16,true);offset+=2;
+    writeText('data');view.setUint32(offset,dataBytes,true);offset+=4;
+    for(let frame=0;frame<frames;frame++)for(let channel=0;channel<channels;channel++){
+      const sample=Math.max(-1,Math.min(1,buffer.getChannelData(channel)[frame]||0));
+      view.setInt16(offset,sample<0?sample*32768:sample*32767,true);offset+=2;
+    }
+    return new Blob([bytes],{type:'audio/wav'});
+  }
+  renderButton.addEventListener('click',async()=>{
+    if(!inputBuffer||renderButton.disabled)return;
+    stopPreview();
+    const sourceBuffer=inputBuffer;
+    const settings={cut:Number($('#cut').value),drive:Number($('#drive').value)/100,delay:Number($('#delay').value)/100,reverb:Number($('#reverb').value)/100};
+    const token=++renderToken;
+    clearRender();
+    renderToken=token;
+    setBusy(true);
+    setStatus('Application des effets et création du rendu…');
+    try{
+      const OfflineContext=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+      if(!OfflineContext)throw new Error('Le rendu audio hors ligne n’est pas pris en charge par ce navigateur.');
+      const tail=settings.delay>0||settings.reverb>0?2.4:0;
+      const channels=Math.max(1,Math.min(2,sourceBuffer.numberOfChannels));
+      const frames=sourceBuffer.length+Math.ceil(tail*sourceBuffer.sampleRate);
+      const context=new OfflineContext(channels,frames,sourceBuffer.sampleRate);
+      const source=context.createBufferSource(),filter=context.createBiquadFilter(),distortion=context.createWaveShaper(),output=context.createGain();
+      source.buffer=sourceBuffer;
+      filter.type='lowpass';filter.frequency.value=settings.cut;filter.Q.value=.707;
+      distortion.curve=makeDriveCurve(settings.drive);distortion.oversample='4x';
+      source.connect(filter).connect(distortion);
+      const wet=Math.max(settings.delay,settings.reverb);
+      const dry=context.createGain();dry.gain.value=1-wet*.35;
+      distortion.connect(dry).connect(output);
+      if(settings.delay>0){
+        const delay=context.createDelay(1.2),feedback=context.createGain(),damping=context.createBiquadFilter(),delayWet=context.createGain();
+        delay.delayTime.value=.28;feedback.gain.value=.32;damping.type='lowpass';damping.frequency.value=5200;delayWet.gain.value=settings.delay*.65;
+        distortion.connect(delay);delay.connect(damping).connect(feedback).connect(delay);delay.connect(delayWet).connect(output);
+      }
+      if(settings.reverb>0){
+        const convolver=context.createConvolver(),reverbWet=context.createGain();
+        convolver.buffer=makeImpulse(context);reverbWet.gain.value=settings.reverb*.65;
+        distortion.connect(convolver).connect(reverbWet).connect(output);
+      }
+      output.connect(context.destination);
+      source.start(0);
+      const result=await context.startRendering();
+      if(token!==renderToken)return;
+      const peak=applyOutputCeiling(result);
+      renderedBuffer=result;
+      renderUrl=URL.createObjectURL(encodeWav(result));
+      player.src=renderUrl;
+      player.onended=()=>{if(token===renderToken)setStatus('Lecture terminée · le rendu reste disponible.');};
+      playButton.disabled=false;downloadButton.disabled=false;
+      const ceiling=peak.gain<1?' · crête sécurisée à −1 dBFS':' · crête sous −1 dBFS';
+      setStatus('Rendu traité prêt · '+result.duration.toFixed(2)+' s · WAV PCM 16 bits'+ceiling);
+    }catch(error){
+      if(token===renderToken)setStatus(formatError('Échec du rendu audio',error));
+    }finally{
+      if(token===renderToken)setBusy(false);
+    }
+  });
+  playButton.addEventListener('click',async()=>{
+    if(!renderUrl)return;
+    try{
+      player.currentTime=0;
+      await player.play();
+      setStatus('Lecture du rendu traité…');
+    }catch(error){setStatus(formatError('Lecture impossible',error)+' Vérifie la sortie audio du navigateur.');}
+  });
+  downloadButton.addEventListener('click',()=>{
+    if(!renderedBuffer||!renderUrl)return;
+    const link=document.createElement('a');
+    link.href=renderUrl;link.download='beat-lab-effets-traites.wav';
+    document.body.appendChild(link);link.click();link.remove();
+    setStatus('Téléchargement du WAV traité · '+renderedBuffer.duration.toFixed(2)+' s.');
+  });
+})();
+</script></body></html>
