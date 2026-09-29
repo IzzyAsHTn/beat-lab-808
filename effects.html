@@ -79,6 +79,7 @@
     clearRender();
     inputBuffer=null;
     renderButton.disabled=true;
+    previewButton.disabled=true;
     name.textContent=selected?selected.name:'Aucun fichier chargé';
     if(!selected){setStatus('Sélectionne un fichier WAV, AIFF, MP3 ou compatible avec ton navigateur.');return;}
     setStatus('Chargement et décodage de « '+selected.name+' »…');
@@ -136,10 +137,11 @@
     const sourceBuffer=inputBuffer,token=++previewToken;
     previewButton.disabled=true;
     previewButton.textContent='Préparation de la préécoute…';
+    let pendingContext=null;
     try{
       const AudioContextClass=window.AudioContext||window.webkitAudioContext;
       if(!AudioContextClass)throw new Error('AudioContext n’est pas disponible dans ce navigateur.');
-      const context=new AudioContextClass();
+      const context=pendingContext=new AudioContextClass();
       const source=context.createBufferSource(),filter=context.createBiquadFilter(),distortion=context.createWaveShaper(),output=context.createGain();
       const dry=context.createGain(),nodes=[source,filter,distortion,dry,output];
       source.buffer=sourceBuffer;source.loop=true;
@@ -173,6 +175,7 @@
       setStatus('Préécoute en boucle · ajuste les effets en direct.');
       source.onended=()=>{if(preview?.source===source)stopPreview('Préécoute terminée.');};
     }catch(error){
+      if(pendingContext&&preview?.context!==pendingContext&&pendingContext.state!=='closed')pendingContext.close().catch(closeError=>console.warn('Fermeture de la préécoute audio',closeError));
       if(token===previewToken){stopPreview();setStatus(formatError('Préécoute impossible',error)+' Vérifie la sortie audio du navigateur.');}
     }
   });
