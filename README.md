@@ -4,7 +4,7 @@ Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte
 
 ## Outils
 
-- `index.html` — boîte à rythmes 8 voix et 16 pas avec deux kits. Le kit TR-808 emploie un clap synthétisé en rafales de bruit filtré et une courte réverbération; le kit industriel transforme un clap acoustique enregistré avec saturation, claquement métallique et échos courts. Chaque voix a ses boutons Mute, Solo et effacement du motif. Son motif, le kit, le tempo et le swing sont mémorisés dans le navigateur.
+- `index.html` — boîte à rythmes 8 voix et 16 pas avec deux kits. Le kit TR-808 emploie un clap synthétisé en rafales de bruit filtré et une courte réverbération; le kit industriel combine des rafales synthétiques, un corps percussif, des résonances métalliques et une saturation douce. Chaque voix a ses boutons Mute, Solo et effacement du motif. Son motif, le kit, le tempo et le swing sont mémorisés dans le navigateur.
 - `sequencer.html` — séquenceur de samples 8 pistes / 32 pas, boucles de 8, 16 ou 32 pas, swing, volume, panoramique, Mute et Solo indépendants par piste, ainsi que filtre passe-bas, saturation, écho et réverbération par piste.
 - `samples.html` — lecteur et découpeur local de samples, forme d’onde, écoute et export WAV.
 - `effects.html` — impression hors ligne des effets dans un WAV; fichier limité à 2 minutes pour éviter une surcharge mémoire. Les effets temps réel par piste sont dans le séquenceur.
@@ -13,10 +13,10 @@ Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte
 
 Le séquenceur enregistre automatiquement les motifs, réglages de mixage (volume, panoramique, Mute, Solo), effets et samples que tu importes dans le stockage local du navigateur (IndexedDB et stockage local). Ils sont conservés quand tu navigues vers un autre outil puis reviens, sur le même navigateur et le même appareil. Les fichiers que tu importes ne sont pas envoyés sur GitHub. Effacer les données du site dans le navigateur efface aussi ces samples.
 
-## Clap du kit industriel
+## Ancien échantillon archivé
 
-`clap-real.wav` est le clap acoustique utilisé comme matière organique dans le kit industriel. Il provient de l'instrument World Percussion de FreePats : [samples/HandClap/01_02.flac](https://github.com/freepats/world-percussion/blob/main/samples/HandClap/01_02.flac). L'instrument a été enregistré par Roberto en juin 2019 et est publié sous licence CC0. Le fichier a été converti en WAV pour la lecture directe dans le navigateur. Le kit TR-808 classique n'utilise pas cet échantillon.
+`clap-real.wav` est conservé dans le dépôt comme ancienne ressource, mais n'est plus chargé ni utilisé par les kits. Il provient de l'instrument World Percussion de FreePats : [samples/HandClap/01_02.flac](https://github.com/freepats/world-percussion/blob/main/samples/HandClap/01_02.flac). L'instrument a été enregistré par Roberto en juin 2019 et est publié sous licence CC0.
 
 ## Mise à jour sur GitHub Pages
 
-Décompresse l’archive du site et téléverse les fichiers à la racine du dépôt `IzzyAsHTn/beat-lab-808`. Pour cette mise à jour, remplace `index.html` et `README.md`, en gardant `clap-real.wav` à la racine. Valide avec **Commit changes**, puis attends le déploiement Pages.
+Décompresse l’archive du site et téléverse les fichiers à la racine du dépôt `IzzyAsHTn/beat-lab-808`. Pour cette mise à jour, remplace `index.html` et `README.md`. Valide avec **Commit changes**, puis attends le déploiement Pages.
