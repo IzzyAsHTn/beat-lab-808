@@ -33,7 +33,7 @@
  function updateFxSlider(range){const min=Number(range.min),max=Number(range.max),ratio=(Number(range.value)-min)/(max-min),progress=Math.max(0,Math.min(100,ratio*100));range.style.setProperty('--fx-progress',progress+'%')}
  function setFxValue(track,key,value,output){track.fx[key]=Number(value);output.textContent=key==='filter'?(Number(value)>=1000?(Number(value)/1000).toFixed(Number(value)>=10000?0:1)+' kHz':value+' Hz'):value+'%';applyFx(track);saveState()}
  function updateMixSlider(range,key,value){const ratio=(Number(value)-Number(range.min))/(Number(range.max)-Number(range.min)),position=Math.max(0,Math.min(100,ratio*100));range.style.setProperty('--mix-fill-start',(key==='pan'?Math.min(position,50):0)+'%');range.style.setProperty('--mix-fill-end',(key==='pan'?Math.max(position,50):position)+'%')}
- function formatPercent(value){const n=Number(value);return Number(Number(n.toFixed(2)))+'%'}
+ function formatPercent(value){return Math.round(Number(value))+'%'}
  function formatPan(value){const n=Number(value);return n===0?'Centre':(n<0?'G ':'D ')+formatPercent(Math.abs(n))}
  function setMixValue(track,key,value,output){track.mix[key]=Number(value);output.textContent=key==='volume'?formatPercent(value):formatPan(value);applyMix(track);saveState()}
  function syncTrackToggles(track){[['mute',track._muteButton],['solo',track._soloButton]].forEach(([key,button])=>{if(!button)return;button.classList.toggle('is-active',track[key]);button.setAttribute('aria-pressed',String(track[key]))})}
