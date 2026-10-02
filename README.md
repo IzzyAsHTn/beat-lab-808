@@ -5,7 +5,7 @@ Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte
 ## Outils
 
 - `index.html` — boîte à rythmes 8 voix et 16 pas avec deux kits. Le kit TR-808 emploie un clap synthétisé en rafales de bruit filtré et une courte réverbération; le kit Industriel joue le sample `industrial-clap.wav`, avec tuning par demi-tons. Chaque voix a ses boutons Mute, Solo et effacement du motif. Son motif, le kit, le tempo et le swing sont mémorisés dans le navigateur.
-- `sequencer.html` — séquenceur de samples 8 pistes / 32 pas, boucles de 8, 16 ou 32 pas, swing, volume, panoramique, Mute et Solo indépendants par piste, ainsi que filtre passe-bas, saturation, écho et réverbération par piste.
+- `sequencer.html` — séquenceur de samples 8 pistes, boucles de 8 ou 16 pas, swing, volume, panoramique, Mute et Solo indépendants par piste, ainsi que filtre passe-bas, saturation, écho et réverbération par piste. Les pas masqués par la longueur choisie restent mémorisés.
 - `samples.html` — lecteur et découpeur local de samples, forme d’onde, écoute et export WAV.
 - `effects.html` — impression hors ligne des effets dans un WAV; fichier limité à 2 minutes pour éviter une surcharge mémoire. Les effets temps réel par piste sont dans le séquenceur.
 
