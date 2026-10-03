@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111315">
-  <meta name="description" content="Un jeu de mémoire musicale : écoute la séquence, puis reproduis-la sur les pads.">
+  <meta name="description" content="Deux jeux de mémoire musicale : une séquence qui s’allonge ou de nouveaux motifs à reproduire.">
   <title>Groove mystère</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23111315'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23b6f36a' stroke-width='4'/%3E%3Ccircle cx='20' cy='20' r='3' fill='%23b6f36a'/%3E%3C/svg%3E">
   <style>
@@ -66,12 +66,19 @@
     </nav>
     <header>
       <div class="brand"><div class="mark" aria-hidden="true">◉</div><div><p class="eyebrow">Atelier musical · 01</p><h1>Groove mystère</h1></div></div>
-      <div class="level">Jeu <strong>Simon musical</strong></div>
+      <div class="level">Jeu <strong id="gameModeTitle">Simon musical</strong></div>
     </header>
     <section class="game" aria-label="Jeu de mémoire musicale">
       <div class="topline">
         <div class="round" id="roundLabel">Meilleure suite : <strong>0</strong> sons</div>
         <button id="start" class="primary" type="button">Lancer la partie</button>
+      </div>
+      <div class="mode-row">
+        <span class="mode-label">Choisis le jeu</span>
+        <div class="mode-switch" role="group" aria-label="Mode de jeu">
+          <button id="simonGame" class="mode-choice" type="button" aria-pressed="true">Séquence Simon</button>
+          <button id="patternGame" class="mode-choice" type="button" aria-pressed="false">Motif mystère</button>
+        </div>
       </div>
       <div class="mode-row">
         <span class="mode-label">Choisis tes sons</span>
@@ -90,7 +97,7 @@
       </div>
       <p class="howto" id="howto">Chaque tour ajoute un coup. Une erreur termine la partie.</p>
     </section>
-    <p class="footer">Quatre pads · une séquence qui s'allonge · à toi de garder le rythme.</p>
+    <p class="footer">Deux façons de jouer · notes ou percussions · à toi de garder le rythme.</p>
   </main>
   <script>
     const pads = [...document.querySelectorAll(".pad")];
@@ -98,7 +105,10 @@
     const roundLabel = document.getElementById("roundLabel");
     const startButton = document.getElementById("start");
     const howto = document.getElementById("howto");
-    const modeButtons = [document.getElementById("drumMode"), document.getElementById("noteMode")];
+    const gameModeTitle = document.getElementById("gameModeTitle");
+    const soundModeButtons = [document.getElementById("drumMode"), document.getElementById("noteMode")];
+    const gameModeButtons = [document.getElementById("simonGame"), document.getElementById("patternGame")];
+    const modeButtons = [...soundModeButtons, ...gameModeButtons];
     const padSets = {
       drums: [
         { name:"Grosse caisse", glyph:"●", aria:"Grosse caisse" },
@@ -115,10 +125,13 @@
     };
     const noteFrequencies = [196.00, 261.63, 329.63, 392.00];
     const bestByMode = { drums:0, notes:0 };
+    const bestPatternsByMode = { drums:0, notes:0 };
     let mode = "drums";
+    let gameMode = "simon";
     let audioContext;
     let sequence = [];
     let inputIndex = 0;
+    let completedPatterns = 0;
     let phase = "idle";
     let tempo = 630;
     let handlingInput = false;
@@ -127,6 +140,13 @@
     function updateStatus(message) { statusLine.innerHTML = message; }
     function setPadsDisabled(disabled) { pads.forEach(pad => pad.disabled = disabled); }
     function setModeControlsDisabled(disabled) { modeButtons.forEach(button => button.disabled = disabled); }
+    function updateRoundLabel() {
+      if (gameMode === "pattern") {
+        roundLabel.innerHTML = "Meilleurs motifs : <strong>" + bestPatternsByMode[mode] + "</strong>";
+        return;
+      }
+      roundLabel.innerHTML = "Meilleure suite : <strong>" + bestByMode[mode] + "</strong> " + (mode === "notes" ? "notes" : "sons");
+    }
     async function ensureAudioReady() {
       audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
       if (audioContext.state !== "running") await audioContext.resume();
@@ -139,11 +159,17 @@
         pad.querySelector(".name").textContent = info.name;
         pad.setAttribute("aria-label", info.aria);
       });
-      modeButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === mode)));
-      roundLabel.innerHTML = "Meilleure suite : <strong>" + bestByMode[mode] + "</strong> " + (mode === "notes" ? "notes" : "sons");
-      howto.textContent = mode === "notes"
-        ? "Chaque tour ajoute une note. Une erreur termine la partie."
-        : "Chaque tour ajoute un coup. Une erreur termine la partie.";
+      soundModeButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === mode)));
+      gameModeButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === gameMode)));
+      updateRoundLabel();
+      gameModeTitle.textContent = gameMode === "pattern" ? "Motif mystère" : "Simon musical";
+      if (gameMode === "pattern") {
+        howto.textContent = "Un nouveau motif de 4 " + (mode === "notes" ? "notes" : "sons") + " à chaque tour. Le tempo accélère progressivement.";
+      } else {
+        howto.textContent = mode === "notes"
+          ? "Chaque tour ajoute une note. Une erreur termine la partie."
+          : "Chaque tour ajoute un coup. Une erreur termine la partie.";
+      }
       document.querySelector(".pads").setAttribute("aria-label", mode === "notes" ? "Pads de notes" : "Pads de percussion");
     }
     function chooseMode(nextMode) {
@@ -152,19 +178,45 @@
       phase = "idle";
       sequence = [];
       inputIndex = 0;
+      completedPatterns = 0;
       handlingInput = false;
       setPadsDisabled(false);
       setModeControlsDisabled(false);
       startButton.disabled = false;
       startButton.textContent = "Lancer la partie";
       renderMode();
-      updateStatus(mode === "notes"
-        ? "Mode notes choisi. Écoute la suite, puis retrouve les notes dans l'ordre."
-        : "Mode percussions choisi. Écoute la suite, puis retrouve les sons dans l'ordre.");
+      const soundName = mode === "notes" ? "notes" : "sons";
+      updateStatus(gameMode === "pattern"
+        ? "Mode " + soundName + " choisi. Chaque tour propose un nouveau motif à reproduire."
+        : mode === "notes"
+          ? "Mode notes choisi. Écoute la suite, puis retrouve les notes dans l'ordre."
+          : "Mode percussions choisi. Écoute la suite, puis retrouve les sons dans l'ordre.");
+    }
+    function chooseGameMode(nextGameMode) {
+      if (phase === "playback" || phase === "input" || phase === "between") return;
+      gameMode = nextGameMode;
+      phase = "idle";
+      sequence = [];
+      inputIndex = 0;
+      completedPatterns = 0;
+      handlingInput = false;
+      setPadsDisabled(false);
+      setModeControlsDisabled(false);
+      startButton.disabled = false;
+      startButton.textContent = "Lancer la partie";
+      renderMode();
+      updateStatus(gameMode === "pattern"
+        ? "Motif mystère choisi. Écoute une phrase musicale, puis reproduis-la. Chaque tour propose un nouveau motif."
+        : "Séquence Simon choisie. Écoute la suite, puis reproduis-la. Elle s'allongera à chaque tour.");
     }
     modeButtons[0].dataset.mode = "drums";
     modeButtons[1].dataset.mode = "notes";
-    modeButtons.forEach(button => button.addEventListener("click", () => chooseMode(button.dataset.mode)));
+    soundModeButtons[0].dataset.mode = "drums";
+    soundModeButtons[1].dataset.mode = "notes";
+    gameModeButtons[0].dataset.mode = "simon";
+    gameModeButtons[1].dataset.mode = "pattern";
+    soundModeButtons.forEach(button => button.addEventListener("click", () => chooseMode(button.dataset.mode)));
+    gameModeButtons.forEach(button => button.addEventListener("click", () => chooseGameMode(button.dataset.mode)));
 
     function makeSound(id) {
       audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
@@ -243,7 +295,9 @@
       setModeControlsDisabled(true);
       startButton.disabled = true;
       const unit = mode === "notes" ? "note" : "son";
-      updateStatus("Écoute bien : <strong>" + sequence.length + " " + (sequence.length > 1 ? unit + "s" : unit) + "</strong>");
+      updateStatus(gameMode === "pattern"
+        ? "Écoute bien le motif : <strong>" + sequence.length + " " + (sequence.length > 1 ? unit + "s" : unit) + "</strong>"
+        : "Écoute bien : <strong>" + sequence.length + " " + (sequence.length > 1 ? unit + "s" : unit) + "</strong>");
       await wait(450);
       for (const id of sequence) {
         if (phase !== "playback") return;
@@ -253,14 +307,20 @@
       phase = "input";
       inputIndex = 0;
       setPadsDisabled(false);
-      updateStatus(mode === "notes"
-        ? "À toi : rejoue les <strong>" + sequence.length + " " + (sequence.length > 1 ? "notes" : "note") + "</strong> dans le même ordre."
-        : "À toi : rejoue les <strong>" + sequence.length + " " + (sequence.length > 1 ? "sons" : "son") + "</strong> dans le même ordre.");
+      updateStatus(gameMode === "pattern"
+        ? "À toi : reproduis ce motif dans le même ordre."
+        : mode === "notes"
+          ? "À toi : rejoue les <strong>" + sequence.length + " " + (sequence.length > 1 ? "notes" : "note") + "</strong> dans le même ordre."
+          : "À toi : rejoue les <strong>" + sequence.length + " " + (sequence.length > 1 ? "sons" : "son") + "</strong> dans le même ordre.");
     }
 
     function beginRound() {
       phase = "playback";
-      sequence.push(Math.floor(Math.random() * pads.length));
+      if (gameMode === "simon") {
+        sequence.push(Math.floor(Math.random() * pads.length));
+      } else {
+        sequence = Array.from({ length:4 }, () => Math.floor(Math.random() * pads.length));
+      }
       void playSequence();
     }
 
@@ -270,9 +330,13 @@
       startButton.disabled = false;
       startButton.textContent = "Rejouer";
       makeSound(1); await wait(85); makeSound(1);
-      const completed = Math.max(0, sequence.length - 1);
-      const unit = mode === "notes" ? "notes" : "sons";
-      updateStatus("Fin de partie. Tu as réussi <strong>" + completed + " " + (completed > 1 ? "tours" : "tour") + "</strong> et retrouvé " + sequence.length + " " + unit + " d'affilée.");
+      if (gameMode === "pattern") {
+        updateStatus("Fin de partie. Tu as reproduit <strong>" + completedPatterns + " " + (completedPatterns > 1 ? "motifs" : "motif") + "</strong> à la suite.");
+      } else {
+        const completed = Math.max(0, sequence.length - 1);
+        const unit = mode === "notes" ? "notes" : "sons";
+        updateStatus("Fin de partie. Tu as réussi <strong>" + completed + " " + (completed > 1 ? "tours" : "tour") + "</strong> et retrouvé " + sequence.length + " " + unit + " d'affilée.");
+      }
       setModeControlsDisabled(false);
     }
 
@@ -286,10 +350,17 @@
       handlingInput = false;
       if (inputIndex < sequence.length) return;
       phase = "between";
-      bestByMode[mode] = Math.max(bestByMode[mode], sequence.length);
-      roundLabel.innerHTML = "Meilleure suite : <strong>" + bestByMode[mode] + "</strong> " + (mode === "notes" ? "notes" : "sons");
-      updateStatus("Bien joué ! Le groove s'allonge…");
-      tempo = Math.max(300, 630 - Math.floor(sequence.length / 4) * 45);
+      if (gameMode === "pattern") {
+        completedPatterns++;
+        bestPatternsByMode[mode] = Math.max(bestPatternsByMode[mode], completedPatterns);
+        updateStatus("Motif retrouvé ! Un nouveau pattern arrive…");
+        tempo = Math.max(360, 630 - Math.floor(completedPatterns / 3) * 40);
+      } else {
+        bestByMode[mode] = Math.max(bestByMode[mode], sequence.length);
+        updateStatus("Bien joué ! Le groove s'allonge…");
+        tempo = Math.max(300, 630 - Math.floor(sequence.length / 4) * 45);
+      }
+      updateRoundLabel();
       await wait(700);
       if (phase === "between") beginRound();
     }));
@@ -309,6 +380,7 @@
       }
       sequence = [];
       inputIndex = 0;
+      completedPatterns = 0;
       handlingInput = false;
       tempo = 630;
       setModeControlsDisabled(true);
