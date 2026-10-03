@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111315">
+  <meta name="description" content="Un jeu de mémoire musicale : écoute la séquence, puis reproduis-la sur les pads.">
+  <title>Groove mystère</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23111315'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23b6f36a' stroke-width='4'/%3E%3Ccircle cx='20' cy='20' r='3' fill='%23b6f36a'/%3E%3C/svg%3E">
+  <style>
+    :root { color-scheme:dark; --bg:#111315; --surface:#1a1e20; --line:#343a3d; --ink:#f2f2eb; --muted:#a5aaa5; --lime:#b6f36a; }
+    * { box-sizing:border-box; }
+    body { min-height:100vh; margin:0; background:radial-gradient(ellipse at 50% -30%, #293126 0, var(--bg) 58%); color:var(--ink); font:16px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(620px,calc(100% - 32px)); margin:0 auto; padding:42px 0 60px; }
+    .site-nav { display:flex;flex-wrap:wrap;gap:8px;margin:0 0 25px; }
+    .site-nav a { padding:7px 11px;border:1px solid #48483e;border-radius:999px;color:var(--muted);font-size:12px;text-decoration:none; }
+    .site-nav a:hover { border-color:var(--lime);color:var(--ink); }
+    .site-nav a[aria-current="page"] { border-color:var(--lime);background:var(--lime);color:#17180f;font-weight:700; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:26px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .mark { width:38px;height:38px;display:grid;place-items:center;border:1px solid #536448;border-radius:50%;color:var(--lime);font-size:19px; }
+    .eyebrow { margin:0 0 3px;color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.13em;text-transform:uppercase; }
+    h1 { margin:0;font-size:clamp(25px,5vw,34px);line-height:1.1;letter-spacing:-.04em; }
+    .level { border:1px solid var(--line);border-radius:999px;padding:7px 12px;color:var(--muted);font-size:13px;white-space:nowrap; }
+    .level strong { color:var(--ink);font-weight:600; }
+    .game { border:1px solid #343a3d;border-radius:22px;background:linear-gradient(145deg,rgba(31,35,37,.97),rgba(22,25,27,.97));padding:clamp(20px,5vw,32px);box-shadow:0 24px 80px #0005; }
+    .topline { display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--line); }
+    .round { color:var(--muted);font-size:14px; }
+    .round strong { color:var(--ink);font-variant-numeric:tabular-nums; }
+    button { min-height:44px;border:1px solid var(--line);border-radius:10px;padding:0 15px;background:#252a2c;color:var(--ink);font:inherit;font-weight:600;cursor:pointer;transition:transform .15s ease,border-color .15s ease,filter .15s ease; }
+    button:hover:not(:disabled) { transform:translateY(-1px);border-color:#67705f; }
+    button:focus-visible { outline:3px solid var(--lime);outline-offset:3px; }
+    button:disabled { opacity:.5;cursor:not-allowed; }
+    .primary { border-color:var(--lime);background:var(--lime);color:#151912; }
+    .mode-row { display:flex;align-items:center;justify-content:space-between;gap:12px;margin:17px 0 0; }
+    .mode-label { color:var(--muted);font-size:13px; }
+    .mode-switch { display:flex;gap:4px;padding:3px;border:1px solid #343330;border-radius:999px;background:#11110f; }
+    .mode-choice { min-height:38px;padding:0 13px;border-color:transparent;border-radius:999px;background:transparent;color:var(--muted);font-size:13px; }
+    .mode-choice[aria-pressed="true"] { border-color:transparent;background:#eee9dc;color:#181715; }
+    .status { min-height:56px;display:flex;align-items:center;justify-content:center;margin:17px 0 12px;text-align:center;color:var(--muted);font-size:15px; }
+    .status strong { color:var(--ink); }
+    .pads { position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;width:min(100%,390px);aspect-ratio:1;margin:0 auto;padding:13px;overflow:hidden;border:8px solid #080908;border-radius:50%;background:#080908;box-shadow:0 15px 30px #0006,inset 0 2px 4px #ffffff16; }
+    .pad { min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid #ffffff25;border-radius:18px;padding:8px;box-shadow:inset 0 1px #ffffff22,0 6px 16px #0003;color:#111315;transition:filter .12s ease,box-shadow .12s ease; }
+    .pad .glyph { font-size:23px;line-height:1;opacity:.88; }
+    .pad .name { font-size:14px;font-weight:700; }
+    .pad[data-pad="0"] { border-radius:100% 18px 18px 18px;background:#91d43c;--pad-glow:#91d43c; }
+    .pad[data-pad="1"] { border-radius:18px 100% 18px 18px;background:#ed4038;--pad-glow:#ed4038; }
+    .pad[data-pad="2"] { border-radius:18px 18px 18px 100%;background:#f0c236;--pad-glow:#f0c236; }
+    .pad[data-pad="3"] { border-radius:18px 18px 100% 18px;background:#398fce;--pad-glow:#398fce; }
+    .pad:hover:not(:disabled) { transform:none;filter:brightness(1.09); }
+    .pad.is-lit { transform:none;filter:brightness(1.28);box-shadow:inset 0 0 0 4px #ffffffbd,inset 0 0 25px #ffffff55,0 6px 16px #0003; }
+    .pad:disabled { opacity:.84; }
+    .center-hub { position:absolute;z-index:2;top:50%;left:50%;display:grid;width:35%;aspect-ratio:1;place-content:center;gap:2px;transform:translate(-50%,-50%);border:8px solid #080908;border-radius:50%;background:radial-gradient(circle at 35% 28%,#35332f,#171715 68%);color:#f4f0e5;text-align:center;box-shadow:0 4px 10px #000b;pointer-events:none; }
+    .center-hub strong { font-size:clamp(10px,2vw,14px);letter-spacing:.09em; }
+    .center-hub small { color:#b0aa9e;font-size:9px;letter-spacing:.11em; }
+    .howto { margin:18px 0 0;color:#858c86;text-align:center;font-size:13px; }
+    .footer { margin:18px 2px 0;color:#858c86;font-size:13px;text-align:center; }
+    @media(max-width:460px) { main{padding-top:27px}.game{padding:18px 14px}.topline{align-items:flex-start;flex-direction:column}.topline button{width:100%}.mode-row{align-items:stretch;flex-direction:column}.mode-switch{width:100%}.mode-choice{flex:1;padding:0 10px}.pads{gap:8px;padding:9px;border-width:6px}.pad{font-size:14px}.pad .glyph{font-size:20px}.pad .name{font-size:12px}.center-hub{border-width:6px}.status{font-size:14px} }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after{transition:none!important;scroll-behavior:auto!important} }
+  </style>
+</head>
+<body>
+  <main>
+    <nav class="site-nav" aria-label="Outils musicaux">
+      <a href="ateliers.html">Ateliers</a><a href="./">808 Beat Lab</a><a href="samples.html">Sample Cutter</a><a href="sequencer.html">Séquenceur</a><a href="effects.html">Effets</a>
+    </nav>
+    <header>
+      <div class="brand"><div class="mark" aria-hidden="true">◉</div><div><p class="eyebrow">Atelier musical · 01</p><h1>Groove mystère</h1></div></div>
+      <div class="level">Jeu <strong>Simon musical</strong></div>
+    </header>
+    <section class="game" aria-label="Jeu de mémoire musicale">
+      <div class="topline">
+        <div class="round" id="roundLabel">Meilleure suite : <strong>0</strong> sons</div>
+        <button id="start" class="primary" type="button">Lancer la partie</button>
+      </div>
+      <div class="mode-row">
+        <span class="mode-label">Choisis tes sons</span>
+        <div class="mode-switch" role="group" aria-label="Mode sonore">
+          <button id="drumMode" class="mode-choice" type="button" aria-pressed="true">Percussions</button>
+          <button id="noteMode" class="mode-choice" type="button" aria-pressed="false">Notes</button>
+        </div>
+      </div>
+      <div class="status" id="status" aria-live="polite">Écoute la séquence, puis répète-la dans le même ordre.</div>
+      <div class="pads" role="group" aria-label="Pads de percussion">
+        <button class="pad" data-pad="0" type="button" aria-label="Grosse caisse"><span class="glyph" aria-hidden="true">●</span><span class="name">Grosse caisse</span></button>
+        <button class="pad" data-pad="1" type="button" aria-label="Caisse claire"><span class="glyph" aria-hidden="true">✳</span><span class="name">Caisse claire</span></button>
+        <button class="pad" data-pad="2" type="button" aria-label="Charleston"><span class="glyph" aria-hidden="true">◌</span><span class="name">Charleston</span></button>
+        <button class="pad" data-pad="3" type="button" aria-label="Clap"><span class="glyph" aria-hidden="true">✦</span><span class="name">Clap</span></button>
+        <div class="center-hub" aria-hidden="true"><strong>GROOVE</strong><small>MYSTÈRE</small></div>
+      </div>
+      <p class="howto" id="howto">Chaque tour ajoute un coup. Une erreur termine la partie.</p>
+    </section>
+    <p class="footer">Quatre pads · une séquence qui s'allonge · à toi de garder le rythme.</p>
+  </main>
+  <script>
+    const pads = [...document.querySelectorAll(".pad")];
+    const statusLine = document.getElementById("status");
+    const roundLabel = document.getElementById("roundLabel");
+    const startButton = document.getElementById("start");
+    const howto = document.getElementById("howto");
+    const modeButtons = [document.getElementById("drumMode"), document.getElementById("noteMode")];
+    const padSets = {
+      drums: [
+        { name:"Grosse caisse", glyph:"●", aria:"Grosse caisse" },
+        { name:"Caisse claire", glyph:"✳", aria:"Caisse claire" },
+        { name:"Charleston", glyph:"◌", aria:"Charleston" },
+        { name:"Clap", glyph:"✦", aria:"Clap" }
+      ],
+      notes: [
+        { name:"Sol", glyph:"♪", aria:"Note Sol" },
+        { name:"Do", glyph:"♪", aria:"Note Do" },
+        { name:"Mi", glyph:"♪", aria:"Note Mi" },
+        { name:"Sol", glyph:"♪", aria:"Note Sol" }
+      ]
+    };
+    const noteFrequencies = [196.00, 261.63, 329.63, 392.00];
+    const bestByMode = { drums:0, notes:0 };
+    let mode = "drums";
+    let audioContext;
+    let sequence = [];
+    let inputIndex = 0;
+    let phase = "idle";
+    let tempo = 630;
+    let handlingInput = false;
+
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+    function updateStatus(message) { statusLine.innerHTML = message; }
+    function setPadsDisabled(disabled) { pads.forEach(pad => pad.disabled = disabled); }
+    function setModeControlsDisabled(disabled) { modeButtons.forEach(button => button.disabled = disabled); }
+    async function ensureAudioReady() {
+      audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+      if (audioContext.state !== "running") await audioContext.resume();
+      if (audioContext.state !== "running") throw new Error("AudioContext did not enter running state");
+    }
+    function renderMode() {
+      padSets[mode].forEach((info, id) => {
+        const pad = pads[id];
+        pad.querySelector(".glyph").textContent = info.glyph;
+        pad.querySelector(".name").textContent = info.name;
+        pad.setAttribute("aria-label", info.aria);
+      });
+      modeButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.mode === mode)));
+      roundLabel.innerHTML = "Meilleure suite : <strong>" + bestByMode[mode] + "</strong> " + (mode === "notes" ? "notes" : "sons");
+      howto.textContent = mode === "notes"
+        ? "Chaque tour ajoute une note. Une erreur termine la partie."
+        : "Chaque tour ajoute un coup. Une erreur termine la partie.";
+      document.querySelector(".pads").setAttribute("aria-label", mode === "notes" ? "Pads de notes" : "Pads de percussion");
+    }
+    function chooseMode(nextMode) {
+      if (phase === "playback" || phase === "input" || phase === "between") return;
+      mode = nextMode;
+      phase = "idle";
+      sequence = [];
+      inputIndex = 0;
+      handlingInput = false;
+      setPadsDisabled(false);
+      setModeControlsDisabled(false);
+      startButton.disabled = false;
+      startButton.textContent = "Lancer la partie";
+      renderMode();
+      updateStatus(mode === "notes"
+        ? "Mode notes choisi. Écoute la suite, puis retrouve les notes dans l'ordre."
+        : "Mode percussions choisi. Écoute la suite, puis retrouve les sons dans l'ordre.");
+    }
+    modeButtons[0].dataset.mode = "drums";
+    modeButtons[1].dataset.mode = "notes";
+    modeButtons.forEach(button => button.addEventListener("click", () => chooseMode(button.dataset.mode)));
+
+    function makeSound(id) {
+      audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioContext;
+      if (ctx.state === "running") {
+        scheduleSound(id, ctx);
+      } else {
+        void ctx.resume().then(() => {
+          if (ctx.state === "running") scheduleSound(id, ctx);
+        }).catch(() => {
+          updateStatus("Le son est suspendu par le navigateur. Clique sur « Lancer la partie » pour le réactiver.");
+        });
+      }
+    }
+
+    function scheduleSound(id, ctx) {
+      const now = ctx.currentTime;
+      if (mode === "notes") {
+        const osc = ctx.createOscillator(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.value = noteFrequencies[id];
+        filter.type = "lowpass";
+        filter.frequency.value = 2600;
+        filter.Q.value = .7;
+        gain.gain.setValueAtTime(.001, now);
+        gain.gain.exponentialRampToValueAtTime(.13, now + .008);
+        gain.gain.exponentialRampToValueAtTime(.001, now + .34);
+        osc.connect(filter).connect(gain).connect(ctx.destination);
+        osc.start(now); osc.stop(now + .35);
+        return;
+      }
+      if (id === 0) {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + .13);
+        gain.gain.setValueAtTime(.8, now);
+        gain.gain.exponentialRampToValueAtTime(.001, now + .24);
+        osc.connect(gain).connect(ctx.destination); osc.start(now); osc.stop(now + .25);
+      } else if (id === 2) {
+        const duration = .09, buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i=0;i<data.length;i++) data[i] = Math.random() * 2 - 1;
+        const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+        source.buffer = buffer; filter.type = "highpass"; filter.frequency.value = 6500;
+        gain.gain.setValueAtTime(.24, now); gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+        source.connect(filter).connect(gain).connect(ctx.destination); source.start(now);
+      } else {
+        const duration = id === 1 ? .16 : .11, buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i=0;i<data.length;i++) data[i] = Math.random() * 2 - 1;
+        const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+        source.buffer = buffer; filter.type = "bandpass"; filter.frequency.value = id === 1 ? 1800 : 1200; filter.Q.value = id === 1 ? .7 : .45;
+        gain.gain.setValueAtTime(id === 1 ? .45 : .33, now); gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+        source.connect(filter).connect(gain).connect(ctx.destination); source.start(now);
+        if (id === 1) {
+          const osc = ctx.createOscillator(), tone = ctx.createGain();
+          osc.type = "triangle"; osc.frequency.value = 180;
+          tone.gain.setValueAtTime(.2, now); tone.gain.exponentialRampToValueAtTime(.001, now + .09);
+          osc.connect(tone).connect(ctx.destination); osc.start(now); osc.stop(now + .1);
+        }
+      }
+    }
+
+    async function flash(id, duration=190) {
+      const pad = pads[id];
+      pad.classList.add("is-lit");
+      makeSound(id);
+      await wait(duration);
+      pad.classList.remove("is-lit");
+    }
+
+    async function playSequence() {
+      if (phase !== "playback") return;
+      setPadsDisabled(true);
+      setModeControlsDisabled(true);
+      startButton.disabled = true;
+      const unit = mode === "notes" ? "note" : "son";
+      updateStatus("Écoute bien : <strong>" + sequence.length + " " + (sequence.length > 1 ? unit + "s" : unit) + "</strong>");
+      await wait(450);
+      for (const id of sequence) {
+        if (phase !== "playback") return;
+        await flash(id, 190);
+        await wait(tempo - 190);
+      }
+      phase = "input";
+      inputIndex = 0;
+      setPadsDisabled(false);
+      updateStatus(mode === "notes"
+        ? "À toi : rejoue les <strong>" + sequence.length + " " + (sequence.length > 1 ? "notes" : "note") + "</strong> dans le même ordre."
+        : "À toi : rejoue les <strong>" + sequence.length + " " + (sequence.length > 1 ? "sons" : "son") + "</strong> dans le même ordre.");
+    }
+
+    function beginRound() {
+      phase = "playback";
+      sequence.push(Math.floor(Math.random() * pads.length));
+      void playSequence();
+    }
+
+    async function fail() {
+      phase = "over";
+      setPadsDisabled(true);
+      startButton.disabled = false;
+      startButton.textContent = "Rejouer";
+      makeSound(1); await wait(85); makeSound(1);
+      const completed = Math.max(0, sequence.length - 1);
+      const unit = mode === "notes" ? "notes" : "sons";
+      updateStatus("Fin de partie. Tu as réussi <strong>" + completed + " " + (completed > 1 ? "tours" : "tour") + "</strong> et retrouvé " + sequence.length + " " + unit + " d'affilée.");
+      setModeControlsDisabled(false);
+    }
+
+    pads.forEach((pad, id) => pad.addEventListener("click", async () => {
+      if (phase !== "input" || handlingInput) return;
+      handlingInput = true;
+      const expected = sequence[inputIndex];
+      await flash(id, 120);
+      if (id !== expected) { handlingInput = false; await fail(); return; }
+      inputIndex++;
+      handlingInput = false;
+      if (inputIndex < sequence.length) return;
+      phase = "between";
+      bestByMode[mode] = Math.max(bestByMode[mode], sequence.length);
+      roundLabel.innerHTML = "Meilleure suite : <strong>" + bestByMode[mode] + "</strong> " + (mode === "notes" ? "notes" : "sons");
+      updateStatus("Bien joué ! Le groove s'allonge…");
+      tempo = Math.max(300, 630 - Math.floor(sequence.length / 4) * 45);
+      await wait(700);
+      if (phase === "between") beginRound();
+    }));
+
+    startButton.addEventListener("click", async () => {
+      if (phase === "playback" || phase === "input" || phase === "between") return;
+      try {
+        await ensureAudioReady();
+      } catch (error) {
+        phase = "idle";
+        setPadsDisabled(false);
+        setModeControlsDisabled(false);
+        startButton.disabled = false;
+        startButton.textContent = "Réessayer";
+        updateStatus("Le son n’a pas démarré. Vérifie la sortie audio, puis réessaie.");
+        return;
+      }
+      sequence = [];
+      inputIndex = 0;
+      handlingInput = false;
+      tempo = 630;
+      setModeControlsDisabled(true);
+      startButton.textContent = "Écoute…";
+      beginRound();
+    });
+    renderMode();
+  </script>
+</body>
+</html>

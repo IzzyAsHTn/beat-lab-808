@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11110f">
+  <meta name="description" content="Des outils interactifs pour jouer avec les rythmes, les sons et les idées musicales.">
+  <title>Ateliers musicaux — Beat Lab 808</title>
+  <style>
+    :root { color-scheme:dark; --bg:#11110f; --line:#393932; --muted:#aaa99e; --text:#f4f0df; --acid:#d8f36a; --orange:#ff8058; --blue:#76caff; }
+    * { box-sizing:border-box; }
+    body { min-height:100vh; margin:0; background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg); color:var(--text); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(100% - 32px,980px); margin:0 auto; padding:38px 0 36px; }
+    .nav { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 32px; }
+    .nav a { padding:8px 13px; border:1px solid #48483e; border-radius:999px; color:var(--muted); font-size:13px; text-decoration:none; }
+    .nav a:hover { border-color:var(--acid); color:var(--text); }
+    .nav a[aria-current="page"] { border-color:var(--acid); background:var(--acid); color:#17180f; font-weight:700; }
+    .eyebrow { margin:0 0 9px; color:var(--acid); font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(38px,7vw,66px); line-height:.98; letter-spacing:-.07em; }
+    .intro { max-width:630px; margin:13px 0 30px; color:var(--muted); font-size:16px; }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:14px; }
+    h2 { margin:0; font-size:18px; }
+    .section-note { color:var(--muted); font-size:12px; }
+    .atelier-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; }
+    .atelier { min-width:0; display:flex; flex-direction:column; min-height:250px; padding:15px; border:1px solid #414139; border-radius:16px; background:linear-gradient(145deg,#20201b,#171714); color:inherit; text-decoration:none; transition:border-color .15s,transform .15s; }
+    .atelier:hover { transform:translateY(-2px); border-color:#767660; }
+    .atelier:focus-visible { outline:3px solid var(--acid); outline-offset:3px; }
+    .atelier.featured { border-color:#75894e; background:linear-gradient(145deg,#292d20,#191a16 78%); }
+    .art { display:grid; min-height:112px; margin-bottom:14px; place-items:center; overflow:hidden; border-radius:11px; background:#121310; }
+    .simon { position:relative; width:92px; aspect-ratio:1; padding:5px; border:5px solid #080908; border-radius:50%; background:#080908; box-shadow:0 7px 15px #0009; }
+    .simon-grid { display:grid; width:100%; height:100%; grid-template:1fr 1fr/1fr 1fr; gap:3px; overflow:hidden; border-radius:50%; }
+    .simon-grid i:nth-child(1) { border-radius:100% 3px 3px 3px; background:#91d43c; }
+    .simon-grid i:nth-child(2) { border-radius:3px 100% 3px 3px; background:#ed4038; }
+    .simon-grid i:nth-child(3) { border-radius:3px 3px 3px 100%; background:#f0c236; }
+    .simon-grid i:nth-child(4) { border-radius:3px 3px 100% 3px; background:#398fce; }
+    .simon-center { position:absolute; top:50%; left:50%; display:grid; width:37%; aspect-ratio:1; place-content:center; transform:translate(-50%,-50%); border:4px solid #080908; border-radius:50%; background:#22211c; color:var(--text); font-size:6px; font-weight:800; letter-spacing:.04em; }
+    .step-art { display:grid; width:190px; grid-template-columns:repeat(8,1fr); gap:5px; transform:rotate(-7deg); }
+    .step-art i { aspect-ratio:1; border-radius:3px; background:#30332a; }
+    .step-art i:nth-child(4n+1) { background:var(--acid); }
+    .step-art i:nth-child(5n+3) { background:#657349; }
+    .beat-art { display:grid; grid-template-columns:repeat(8,15px); gap:5px; }
+    .beat-art i { height:32px; border-radius:4px; background:#34342b; }
+    .beat-art i:nth-child(4n+1),.beat-art i:nth-child(4n+3) { background:var(--acid); }
+    .beat-art i:nth-child(8n+2),.beat-art i:nth-child(8n+6) { background:#55564a; }
+    .wave-art { display:flex; align-items:center; justify-content:center; gap:5px; }
+    .wave-art i { width:6px; height:var(--bar,28px); border-radius:8px; background:var(--blue); }
+    .wave-art i:nth-child(3n) { --bar:47px; }
+    .wave-art i:nth-child(2n) { --bar:17px; }
+    .cut-art { position:relative; display:flex; align-items:center; gap:4px; }
+    .cut-art i { width:5px; height:var(--bar,26px); border-radius:4px; background:#b88cf2; }
+    .cut-art i:nth-child(3n) { --bar:45px; }
+    .cut-art i:nth-child(2n) { --bar:15px; }
+    .cut-art::before,.cut-art::after { position:absolute; top:12px; width:2px; height:54px; background:var(--orange); content:""; }
+    .cut-art::before { left:22px; }.cut-art::after { right:22px; }
+    .fx-art { display:flex; align-items:center; gap:8px; }
+    .fx-art i { display:block; width:46px; aspect-ratio:1; border:2px solid var(--orange); border-radius:50%; }
+    .fx-art i:nth-child(2) { width:66px; border-color:#bd91fa; }
+    .fx-art i:nth-child(3) { width:86px; border-color:var(--blue); }
+    .tag { margin:0 0 3px; color:var(--acid); font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
+    .atelier h3 { margin:0; font-size:19px; letter-spacing:-.035em; }
+    .description { margin:6px 0 17px; color:var(--muted); font-size:13px; }
+    .open { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:11px; border-top:1px solid #393932; color:var(--text); font-size:12px; font-weight:650; }
+    .open span { color:var(--acid); font-size:16px; }
+    .foot { margin:20px 2px 0; color:#858579; font-size:12px; }
+    @media(max-width:760px) { .atelier-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:500px) { main { padding-top:26px; }.nav { gap:6px; margin-bottom:28px; }.nav a { padding:7px 10px; font-size:12px; }.section-head { align-items:flex-start; flex-direction:column; gap:3px; }.atelier-grid { grid-template-columns:1fr; gap:10px; }.atelier { display:grid; grid-template-columns:84px minmax(0,1fr); align-items:center; column-gap:13px; min-height:0; padding:12px; }.art { grid-column:1; grid-row:1 / span 3; min-height:84px; width:84px; margin:0; }.simon { width:58px; padding:3px; border-width:4px; }.simon-center { border-width:3px; font-size:5px; }.step-art { width:68px; grid-template-columns:repeat(4,1fr); gap:3px; }.beat-art { grid-template-columns:repeat(4,9px); gap:3px; }.beat-art i { height:22px; }.wave-art { gap:3px; transform:scale(.8); }.wave-art i { width:4px; }.cut-art { gap:2px; transform:scale(.8); }.cut-art i { width:3px; }.fx-art { gap:2px; transform:scale(.72); }.atelier-copy { grid-column:2; grid-row:1; }.description { grid-column:2; grid-row:2; margin:3px 0 9px; }.open { grid-column:2; grid-row:3; padding-top:8px; } }
+    @media(prefers-reduced-motion:reduce) { .atelier { transition:none; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav class="nav" aria-label="Outils musicaux">
+      <a href="ateliers.html" aria-current="page">Ateliers</a><a href="./">808 Beat Lab</a><a href="samples.html">Sample Cutter</a><a href="sequencer.html">Séquenceur</a><a href="effects.html">Effets</a>
+    </nav>
+    <header>
+      <p class="eyebrow">Explorer · Écouter · Jouer</p>
+      <h1>Ateliers musicaux</h1>
+      <p class="intro">Des outils interactifs pour jouer avec les rythmes, les sons et les idées musicales.</p>
+    </header>
+    <section aria-labelledby="atelier-title">
+      <div class="section-head"><h2 id="atelier-title">Les ateliers</h2><span class="section-note">Choisis un outil pour commencer</span></div>
+      <div class="atelier-grid">
+        <a class="atelier featured" href="groove-mystere.html">
+          <div class="art" aria-hidden="true"><div class="simon"><div class="simon-grid"><i></i><i></i><i></i><i></i></div><div class="simon-center">GROOVE</div></div></div>
+          <div class="atelier-copy"><p class="tag">Jeu d’écoute</p><h3>Groove Mystère</h3></div>
+          <p class="description">Écoute une séquence de notes ou de percussions, puis reproduis-la.</p>
+          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
+        </a>
+        <a class="atelier" href="sequencer.html">
+          <div class="art" aria-hidden="true"><div class="step-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="atelier-copy"><p class="tag">Rythme · Séquence</p><h3>Sample Sequencer</h3></div>
+          <p class="description">Compose un motif en plaçant des sons sur la grille.</p>
+          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
+        </a>
+        <a class="atelier" href="./">
+          <div class="art" aria-hidden="true"><div class="beat-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="atelier-copy"><p class="tag">Boîte à rythmes</p><h3>808 Beat Lab</h3></div>
+          <p class="description">Construis une boucle avec des sons inspirés de la TR-808.</p>
+          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
+        </a>
+        <a class="atelier" href="samples.html">
+          <div class="art" aria-hidden="true"><div class="cut-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="atelier-copy"><p class="tag">Audio · Découpage</p><h3>Sample Cutter</h3></div>
+          <p class="description">Écoute, découpe et exporte tes propres samples.</p>
+          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
+        </a>
+        <a class="atelier" href="effects.html">
+          <div class="art" aria-hidden="true"><div class="fx-art"><i></i><i></i><i></i></div></div>
+          <div class="atelier-copy"><p class="tag">Traitement audio</p><h3>Effets</h3></div>
+          <p class="description">Façonne tes sons avec filtre, saturation, écho et réverbération.</p>
+          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
+        </a>
+      </div>
+    </section>
+    <p class="foot">Les fichiers audio restent sur ton appareil.</p>
+  </main>
+</body>
+</html>
