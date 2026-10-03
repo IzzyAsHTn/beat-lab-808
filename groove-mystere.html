@@ -294,6 +294,7 @@
       setPadsDisabled(true);
       setModeControlsDisabled(true);
       startButton.disabled = true;
+      startButton.textContent = "Écoute…";
       const unit = mode === "notes" ? "note" : "son";
       updateStatus(gameMode === "pattern"
         ? "Écoute bien le motif : <strong>" + sequence.length + " " + (sequence.length > 1 ? unit + "s" : unit) + "</strong>"
@@ -307,6 +308,7 @@
       phase = "input";
       inputIndex = 0;
       setPadsDisabled(false);
+      startButton.textContent = "À toi de jouer";
       updateStatus(gameMode === "pattern"
         ? "À toi : reproduis ce motif dans le même ordre."
         : mode === "notes"
