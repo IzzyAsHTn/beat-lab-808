@@ -1,0 +1,64 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
+const root=process.argv[2]||path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+function program(name){
+  const external=path.join(root,name+'.js');
+  if(fs.existsSync(external))return fs.readFileSync(external,'utf8');
+  return fs.readFileSync(path.join(root,name+'.html'),'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
+}
+// Use an explicit brace scanner: strings (including template literals) are skipped.
+function fn(source,name){
+  const start=source.indexOf('function '+name+'(');assert.ok(start>=0,name);
+  let quote='',escape=false,depth=0;
+  for(let i=source.indexOf('{',start);i<source.length;i++){
+    const ch=source[i];
+    if(quote){if(escape)escape=false;else if(ch==='\\')escape=true;else if(ch===quote)quote='';continue}
+    if(ch==='"'||ch==="'"||ch==='`'){quote=ch;continue}
+    if(ch==='{')depth++;
+    else if(ch==='}'&&--depth===0)return source.slice(start,i+1);
+  }
+  throw Error('Unclosed function '+name);
+}
+const drums=program('index'),cutter=program('samples');
+const timing=[];
+for(const bpm of [60,96,100,160])for(const swing of [false,true]){
+  const times=[];
+  vm.runInNewContext(fn(drums,'scheduler')+';scheduler();',{ctx:{currentTime:4},nextTime:0,lookahead:.12,step:0,tempo:{value:bpm},swing:{checked:swing},schedule:(n,t)=>times.push(t)});
+  const quarter=times[4]-times[0];assert.ok(Math.abs(quarter-60/bpm)<1e-9,`Incorrect tempo: ${bpm}, swing=${swing}`);
+  if(!swing)for(let i=1;i<times.length;i++)assert.ok(Math.abs(times[i]-times[i-1]-60/bpm/4)<1e-9);
+  timing.push({bpm,swing,effectiveBpm:Number((60/quarter).toFixed(6))});
+}
+const callbacks=[],cancelled=new Set(),classes=new Set();
+const scope={tracks:[],ctx:{currentTime:0},cells:[[{classList:{remove:x=>classes.delete(x),add:x=>classes.add(x)}}]],paintTimers:new Set(),setTimeout:fn=>{callbacks.push(fn);return callbacks.length},clearTimeout:id=>cancelled.add(id),clearInterval(){},playing:true,timer:1,playButton:{textContent:''},status:{textContent:''}};
+vm.runInNewContext(fn(drums,'schedule')+';'+fn(drums,'stop')+';schedule(0,.1);stop();',scope);
+assert.equal(cancelled.size,1);assert.equal(scope.paintTimers.size,0);
+callbacks.forEach(callback=>callback());assert.equal(classes.size,0,'Pending callback repainted stopped transport');
+let saved=false;
+const save={localStorage:{setItem(){if(!saved)throw Error('QuotaExceededError')}},storageKey:'test',tempo:{value:100},swing:{checked:false},kit:{value:'808'},tracks:[],persistenceStatus:{textContent:''}};
+vm.runInNewContext(fn(drums,'savePattern')+';result=savePattern();',save);assert.equal(save.result,false);assert.match(save.persistenceStatus.textContent,/Sauvegarde impossible/);
+saved=true;vm.runInNewContext('result=savePattern();',save);assert.equal(save.result,true);assert.match(save.persistenceStatus.textContent,/sauvegardés/);
+for(const percent of [0,35,100]){
+  let volume;
+  const tone={stop(){},URL:{createObjectURL:()=>'',revokeObjectURL(){}},makeTestTone(){},Audio:class{set volume(v){volume=v}async play(){}},gainInput:{value:String(percent)},message:{textContent:''}};
+  await vm.runInNewContext('async '+fn(cutter,'testOutput')+';testOutput();',tone);assert.equal(volume,percent/100);
+}
+const sequencer=program('sequencer');
+const deletionUnavailable={openDB:async()=>null};
+await assert.rejects(vm.runInNewContext('async '+fn(sequencer,'dbDelete')+';dbDelete("test");',deletionUnavailable),/indisponible/);
+const transaction={objectStore(){return{delete(){}}},error:new Error('QuotaExceededError')};
+const deletionFailed={DB_STORE:'samples',openDB:async()=>({transaction(){return transaction}})};
+const deletionPromise=vm.runInNewContext('async '+fn(sequencer,'dbDelete')+';dbDelete("test");',deletionFailed);
+const deletionRejected=assert.rejects(deletionPromise,/QuotaExceededError/);await new Promise(resolve=>setImmediate(resolve));transaction.onerror();await deletionRejected;
+const document={activeElement:null};
+const rows=Array.from({length:2},()=>Array.from({length:32},()=>({tabIndex:0,listeners:{},addEventListener(type,fn){this.listeners[type]=fn},focus(){document.activeElement=this;this.listeners.focus()}})));
+let visible=16;const window={};vm.runInNewContext(fs.readFileSync(path.join(root,'lab-grid.js'),'utf8'),{window,document});
+const navigation=window.BeatLabGrid(rows,()=>visible);
+const key=(button,key)=>{let prevented=false;button.listeners.keydown({key,preventDefault(){prevented=true}});return prevented};
+assert.equal(rows.flat().filter(b=>b.tabIndex===0).length,1);
+rows[0][0].focus();key(rows[0][0],'ArrowRight');assert.equal(document.activeElement,rows[0][1]);key(rows[0][1],'ArrowDown');assert.equal(document.activeElement,rows[1][1]);key(rows[1][1],'End');assert.equal(document.activeElement,rows[1][15]);
+visible=8;navigation.sync();assert.equal(document.activeElement,rows[1][7]);assert.equal(rows.flat().filter(b=>b.tabIndex===0).length,1);assert.equal(key(rows[1][7],'Tab'),false);assert.equal(key(rows[1][7],' '),false);
+for(const name of ['index','sequencer','samples','effects','groove-mystere'])new vm.Script(program(name),{filename:name+'.js'});
+console.log(JSON.stringify({timing,pendingPaintCancelled:true,storageFailureReported:true,testVolumeRespected:[0,35,100],keyboardNavigationPassed:true,sampleDeletionErrorsReported:true,scriptsParsed:5},null,2));

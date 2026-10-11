@@ -1,0 +1,96 @@
+/* Readable controls and responsive step grids for the two rhythm tools. */
+body[data-tool] .grid-help,
+body[data-tool] .persist { color:#bcbcaf; font-size:14px; line-height:1.6; }
+body[data-tool] .grid-help { margin:16px 0 8px; }
+body[data-tool] .step-row { display:contents; }
+body[data-tool] .pad { border-color:#8d8d7d; }
+body[data-tool] .pad.on { border-color:var(--tone); }
+body[data-tool] .status { font-size:13px; }
+
+body[data-tool="sequencer"] .head,
+body[data-tool="sequencer"] .track {
+  grid-template-columns:320px repeat(var(--step-count,16),34px);
+  gap:8px;
+}
+body[data-tool="sequencer"] .track { margin:20px 0; grid-template-rows:auto auto auto; }
+body[data-tool="sequencer"] .trackmix { height:auto; min-height:88px; gap:10px; }
+body[data-tool="sequencer"] .tracktoggles { gap:6px; }
+body[data-tool="sequencer"] .track-toggle { min-width:44px; min-height:44px; font-size:12px; padding:6px; }
+body[data-tool="sequencer"] .mixcontrols { gap:8px; }
+body[data-tool="sequencer"] .mixcontrol { font-size:12px; line-height:1.4; grid-template-rows:auto 44px; gap:4px; }
+body[data-tool="sequencer"] .mixcontrol output { font-size:12px; }
+body[data-tool="sequencer"] .mixcontrol input { height:44px; }
+body[data-tool="sequencer"] .mixcontrol input::-webkit-slider-thumb { width:18px; height:18px; margin-top:-8px; }
+body[data-tool="sequencer"] .mixcontrol input::-moz-range-thumb { width:18px; height:18px; }
+body[data-tool="sequencer"] .pan-title { gap:4px; }
+body[data-tool="sequencer"] .pan-reset { width:32px; height:32px; flex:none; font-size:16px; color:#f4f0df; }
+body[data-tool="sequencer"] .sampleline { flex-wrap:wrap; gap:8px; margin-top:8px; }
+body[data-tool="sequencer"] .sampleline input { width:185px; max-width:100%; font-size:13px; min-height:32px; }
+body[data-tool="sequencer"] .filename { max-width:100%; font-size:13px; color:#bcbcaf; }
+body[data-tool="sequencer"] .btn.small { font-size:13px; min-height:44px; padding:8px; }
+body[data-tool="sequencer"] .trackname { font-size:14px; }
+body[data-tool="sequencer"] .fx summary { font-size:13px; min-height:44px; padding:10px; }
+body[data-tool="sequencer"] .fxgrid { gap:12px; padding:12px 4px; }
+body[data-tool="sequencer"] .fxcontrol { font-size:13px; line-height:1.4; }
+body[data-tool="sequencer"] .fxcontrol output { font-size:12px; }
+body[data-tool="sequencer"] .fxcontrol input { height:44px; }
+body[data-tool="sequencer"] .fxcontrol input::-webkit-slider-thumb { width:18px; height:18px; margin-top:-8px; }
+body[data-tool="sequencer"] .fxcontrol input::-moz-range-thumb { width:18px; height:18px; }
+body[data-tool="sequencer"] .fxhint { font-size:13px; line-height:1.6; padding:12px; }
+body[data-tool="sequencer"] .head { font-size:12px; }
+body[data-tool="sequencer"] .pad { height:34px; }
+
+body[data-tool="drums"] .step-head,
+body[data-tool="drums"] .track { grid-template-columns:170px repeat(16,minmax(30px,1fr)); gap:8px; }
+body[data-tool="drums"] .grid { min-width:778px; }
+body[data-tool="drums"] .name { font-size:13px; }
+body[data-tool="drums"] .voice-toggle { flex:0 0 44px; width:44px; min-width:44px; height:44px; font-size:13px; }
+body[data-tool="drums"] .voice-tools { gap:8px; margin-top:8px; }
+body[data-tool="drums"] .tuning { width:150px; margin-top:6px; }
+body[data-tool="drums"] .tuning input { width:150px; height:44px; }
+body[data-tool="drums"] .tuning input::-webkit-slider-thumb { width:18px; height:18px; margin-top:-8px; }
+body[data-tool="drums"] .tuning input::-moz-range-thumb { width:18px; height:18px; }
+body[data-tool="drums"] .tuning output { font-size:12px; line-height:1.4; color:#bcbcaf; }
+body[data-tool="drums"] .track { margin:20px 0; }
+
+@media (max-width:800px) {
+  body[data-tool] .grid { width:100%; min-width:0; }
+  body[data-tool] .head,
+  body[data-tool] .step-head { display:none; }
+  body[data-tool] .gridwrap,
+  body[data-tool] .seq { overflow:visible; padding:0; }
+  body[data-tool] .track { display:block; width:100%; padding:16px 0; margin:0; border-bottom:1px solid #515146; }
+  body[data-tool] .track:last-child { border-bottom:0; }
+  body[data-tool] .step-row {
+    display:grid;
+    grid-template-columns:repeat(var(--step-count,16),minmax(36px,1fr));
+    gap:8px;
+    width:100%;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    padding:8px 6px 14px;
+    margin-top:10px;
+    scrollbar-color:#8d8d7d #20201b;
+  }
+  body[data-tool] .pad { grid-row:auto; height:36px; min-width:36px; font-size:12px; color:#d3d3c4; }
+  body[data-tool] .pad::after { content:attr(data-step); }
+  body[data-tool] .pad.on { color:#17180f; font-weight:750; }
+  body[data-tool] .pad.measure::before,
+  body[data-tool] .divider::after { display:none; }
+  body[data-tool="sequencer"] .tracklabel { display:block; }
+  body[data-tool="sequencer"] .trackmix { display:block; margin:12px 0; }
+  body[data-tool="sequencer"] .tracktoggles { margin-bottom:10px; }
+  body[data-tool="sequencer"] .mixcontrols { width:100%; gap:16px; }
+  body[data-tool="sequencer"] .pan-reset { width:44px; height:44px; }
+  body[data-tool="sequencer"] .fx { margin:8px 0; }
+  body[data-tool="drums"] .name { display:flex; flex-wrap:wrap; gap:8px 16px; }
+  body[data-tool="drums"] .voice-name { flex-basis:100%; font-size:14px; }
+  body[data-tool="drums"] .voice-tools { margin:0; }
+  body[data-tool="drums"] .tuning { flex:1; min-width:140px; margin:0; }
+  body[data-tool="drums"] .tuning input { width:100%; }
+}
+body[data-tool="sequencer"] .sampleline { display:grid; grid-template-columns:minmax(0,1fr) auto; }
+body[data-tool="sequencer"] .sampleline input { grid-column:1/-1; width:100%; min-height:44px; }
+body[data-tool="sequencer"] .sampleline input::file-selector-button { min-height:44px; font:inherit; }
+body[data-tool="sequencer"] .filename { white-space:normal; overflow-wrap:anywhere; }
+body[data-tool="sequencer"] .btn:disabled { opacity:.5; cursor:not-allowed; }

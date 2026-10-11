@@ -28,3 +28,22 @@ Pour une installation manuelle, place les six fichiers HTML, `lab-shared.css`, `
 Les six pages déclarent la même favicon (SVG avec PNG de secours), un titre et une description Open Graph propres à chaque atelier, leur URL publique et une image de partage commune `partage.png` de 1200 × 630 px. `partage.svg` conserve sa source vectorielle. Si le site change de domaine ou de chemin, mets à jour les URL absolues `og:url` et `og:image` dans les six pages. Les images PNG sont fournies : aucune conversion n’est nécessaire pour publier le site.
 
 Pour vérifier localement : `python3 -m http.server 8080`, puis ouvre `http://localhost:8080/ateliers.html`. Un serveur HTTP permet de tester les fichiers audio et le stockage dans les conditions du site.
+
+
+## Corrections du comportement et des grilles
+
+Le tempo de la boîte à rythmes respecte la valeur affichée avec ou sans swing. Les indicateurs planifiés sont annulés à l’arrêt et les erreurs de sauvegarde sont affichées. Le test de sortie du découpeur respecte son réglage de volume.
+
+Les grilles proposent une seule case dans l’ordre de tabulation : flèches pour changer de pas ou de piste, Début/Fin pour les extrémités de la ligne, Espace ou Entrée pour activer une case. Sur mobile, chaque piste garde ses commandes visibles au-dessus de ses pas défilants.
+
+Les styles et scripts des cinq ateliers sont dans des fichiers séparés. `lab-tools.css` contient les adaptations des deux grilles ; `lab-grid.js` contient leur navigation au clavier. Les URL CSS et JS portent une version dérivée de leur contenu : actualiser cette version après toute modification du fichier concerné.
+
+### Vérification de comportement
+
+Avec Node.js installé :
+
+```sh
+node tests/regression.mjs
+```
+
+Ces tests exécutent les fonctions du site avec une horloge, un stockage et un lecteur audio simulés. Ils couvrent le tempo (60, 96, 100 et 160 BPM, swing activé/désactivé), l’annulation des indicateurs, les erreurs de sauvegarde, le volume du bip et la navigation clavier. Compléter par les essais d’import, de sauvegarde/restauration, d’export audio et d’affichage dans un navigateur.
