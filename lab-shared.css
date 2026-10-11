@@ -27,13 +27,15 @@ body .field input[type="file"] { max-width:100%; }
 body :is(.status,.persist,#name) { overflow-wrap:anywhere; }
 body .drop:focus-within { outline:3px solid #d8f36a; outline-offset:4px; }
 /* Grid transport labels retain their compact layout; individual targets grow. */
-body .voice-toggle { width:25px; height:25px; font-size:10px; color:#c6c6b9; }
+body .voice-toggle { flex:0 0 25px; width:25px; min-width:25px; height:25px; font-size:10px; color:#c6c6b9; }
 @media (max-width:600px) {
   .lab-header { margin-bottom:26px; }
   .lab-brand { margin-bottom:15px; }
   .lab-nav { gap:6px; }
   .lab-nav a { padding:10px 12px; font-size:12px; }
   .lab-footer { align-items:flex-start; }
+  /* Three fixed-size controls need more room than the original 74px label. */
+  .machine :is(.step-head,.track) { grid-template-columns:92px repeat(16,minmax(21px,1fr)); }
 }
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; }
