@@ -17,19 +17,21 @@ h2 { margin:0; font-size:20px; letter-spacing:-.015em; }
 .atelier--beat { --accent:#f7ad76; }
 .atelier--cut { --accent:#c9a5fc; }
 .atelier--fx { --accent:#ff9b7a; }
-.atelier:hover { transform:translateY(-3px); border-color:var(--accent); }
+@media (hover:hover) {
+  .atelier:hover { transform:translateY(-3px); border-color:var(--accent); }
+}
 .atelier:focus-within { border-color:var(--acid); }
 .art { display:flex; align-items:center; justify-content:center; min-height:112px; border-radius:10px; background:#121510; overflow:hidden; margin-bottom:17px; }
 .art svg { flex:none; width:min(100%,280px); height:auto; display:block; }
 .tag { margin:0 0 5px; color:var(--accent); font-size:12px; font-weight:750; letter-spacing:.11em; text-transform:uppercase; }
 h3 { margin:0; font-size:21px; letter-spacing:-.025em; line-height:1.25; }
 .description { margin:10px 0 14px; font-size:14px; color:var(--muted); line-height:1.6; }
-.requirement { margin:0 0 16px; color:#d3d3c4; font-size:12px; }
+.requirement { margin:0 0 16px; color:#d3d3c4; font-size:13px; }
 .atelier-link { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; margin-top:auto; padding-top:12px; border-top:1px solid #494b3f; color:var(--text); font-size:13px; font-weight:700; text-decoration:none; }
 /* One real link per card: clear keyboard name and a generous click target. */
 .atelier-link::after { content:""; position:absolute; inset:0; border-radius:16px; }
 .atelier-link span { color:var(--accent); font-size:21px; }
-.atelier-link:focus-visible { outline:none; }
+.atelier .atelier-link:focus-visible { outline:none; }
 .atelier:has(.atelier-link:focus-visible) { outline:3px solid var(--acid); outline-offset:4px; }
 .practical { margin-top:28px; padding:22px 24px; border:1px solid #515146; border-radius:14px; background:#1b1e17; }
 .practical h2 { font-size:17px; }
