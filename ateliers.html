@@ -1,118 +1,90 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#11110f">
-  <meta name="description" content="Des outils interactifs pour jouer avec les rythmes, les sons et les idées musicales.">
+  <meta name="description" content="Cinq ateliers musicaux pour entraîner ton oreille, créer des rythmes, séquencer tes samples, découper et transformer tes sons dans ton navigateur.">
   <title>Ateliers musicaux — Beat Lab 808</title>
-  <style>
-    :root { color-scheme:dark; --bg:#11110f; --line:#393932; --muted:#aaa99e; --text:#f4f0df; --acid:#d8f36a; --orange:#ff8058; --blue:#76caff; }
-    * { box-sizing:border-box; }
-    body { min-height:100vh; margin:0; background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg); color:var(--text); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-    main { width:min(100% - 32px,980px); margin:0 auto; padding:38px 0 36px; }
-    .nav { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 32px; }
-    .nav a { padding:8px 13px; border:1px solid #48483e; border-radius:999px; color:var(--muted); font-size:13px; text-decoration:none; }
-    .nav a:hover { border-color:var(--acid); color:var(--text); }
-    .nav a[aria-current="page"] { border-color:var(--acid); background:var(--acid); color:#17180f; font-weight:700; }
-    .eyebrow { margin:0 0 9px; color:var(--acid); font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
-    h1 { margin:0; font-size:clamp(38px,7vw,66px); line-height:.98; letter-spacing:-.07em; }
-    .intro { max-width:630px; margin:13px 0 30px; color:var(--muted); font-size:16px; }
-    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:14px; }
-    h2 { margin:0; font-size:18px; }
-    .section-note { color:var(--muted); font-size:12px; }
-    .atelier-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:13px; }
-    .atelier { min-width:0; display:flex; flex-direction:column; min-height:250px; padding:15px; border:1px solid #414139; border-radius:16px; background:linear-gradient(145deg,#20201b,#171714); color:inherit; text-decoration:none; transition:border-color .15s,transform .15s; }
-    .atelier:hover { transform:translateY(-2px); border-color:#767660; }
-    .atelier:focus-visible { outline:3px solid var(--acid); outline-offset:3px; }
-    .atelier.featured { border-color:#75894e; background:linear-gradient(145deg,#292d20,#191a16 78%); }
-    .art { display:grid; min-height:112px; margin-bottom:14px; place-items:center; overflow:hidden; border-radius:11px; background:#121310; }
-    .simon { position:relative; width:92px; aspect-ratio:1; padding:5px; border:5px solid #080908; border-radius:50%; background:#080908; box-shadow:0 7px 15px #0009; }
-    .simon-grid { display:grid; width:100%; height:100%; grid-template:1fr 1fr/1fr 1fr; gap:3px; overflow:hidden; border-radius:50%; }
-    .simon-grid i:nth-child(1) { border-radius:100% 3px 3px 3px; background:#91d43c; }
-    .simon-grid i:nth-child(2) { border-radius:3px 100% 3px 3px; background:#ed4038; }
-    .simon-grid i:nth-child(3) { border-radius:3px 3px 3px 100%; background:#f0c236; }
-    .simon-grid i:nth-child(4) { border-radius:3px 3px 100% 3px; background:#398fce; }
-    .simon-center { position:absolute; top:50%; left:50%; display:grid; width:37%; aspect-ratio:1; place-content:center; transform:translate(-50%,-50%); border:4px solid #080908; border-radius:50%; background:#22211c; color:var(--text); font-size:6px; font-weight:800; letter-spacing:.04em; }
-    .step-art { display:grid; width:190px; grid-template-columns:repeat(8,1fr); gap:5px; transform:rotate(-7deg); }
-    .step-art i { aspect-ratio:1; border-radius:3px; background:#30332a; }
-    .step-art i:nth-child(4n+1) { background:var(--acid); }
-    .step-art i:nth-child(5n+3) { background:#657349; }
-    .beat-art { display:grid; grid-template-columns:repeat(8,15px); gap:5px; }
-    .beat-art i { height:32px; border-radius:4px; background:#34342b; }
-    .beat-art i:nth-child(4n+1),.beat-art i:nth-child(4n+3) { background:var(--acid); }
-    .beat-art i:nth-child(8n+2),.beat-art i:nth-child(8n+6) { background:#55564a; }
-    .wave-art { display:flex; align-items:center; justify-content:center; gap:5px; }
-    .wave-art i { width:6px; height:var(--bar,28px); border-radius:8px; background:var(--blue); }
-    .wave-art i:nth-child(3n) { --bar:47px; }
-    .wave-art i:nth-child(2n) { --bar:17px; }
-    .cut-art { position:relative; display:flex; align-items:center; gap:4px; }
-    .cut-art i { width:5px; height:var(--bar,26px); border-radius:4px; background:#b88cf2; }
-    .cut-art i:nth-child(3n) { --bar:45px; }
-    .cut-art i:nth-child(2n) { --bar:15px; }
-    .cut-art::before,.cut-art::after { position:absolute; top:12px; width:2px; height:54px; background:var(--orange); content:""; }
-    .cut-art::before { left:22px; }.cut-art::after { right:22px; }
-    .fx-art { display:flex; align-items:center; gap:8px; }
-    .fx-art i { display:block; width:46px; aspect-ratio:1; border:2px solid var(--orange); border-radius:50%; }
-    .fx-art i:nth-child(2) { width:66px; border-color:#bd91fa; }
-    .fx-art i:nth-child(3) { width:86px; border-color:var(--blue); }
-    .tag { margin:0 0 3px; color:var(--acid); font-size:10px; font-weight:700; letter-spacing:.13em; text-transform:uppercase; }
-    .atelier h3 { margin:0; font-size:19px; letter-spacing:-.035em; }
-    .description { margin:6px 0 17px; color:var(--muted); font-size:13px; }
-    .open { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:11px; border-top:1px solid #393932; color:var(--text); font-size:12px; font-weight:650; }
-    .open span { color:var(--acid); font-size:16px; }
-    .foot { margin:20px 2px 0; color:#858579; font-size:12px; }
-    @media(max-width:760px) { .atelier-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    @media(max-width:500px) { main { padding-top:26px; }.nav { gap:6px; margin-bottom:28px; }.nav a { padding:7px 10px; font-size:12px; }.section-head { align-items:flex-start; flex-direction:column; gap:3px; }.atelier-grid { grid-template-columns:1fr; gap:10px; }.atelier { display:grid; grid-template-columns:84px minmax(0,1fr); align-items:center; column-gap:13px; min-height:0; padding:12px; }.art { grid-column:1; grid-row:1 / span 3; min-height:84px; width:84px; margin:0; }.simon { width:58px; padding:3px; border-width:4px; }.simon-center { border-width:3px; font-size:5px; }.step-art { width:68px; grid-template-columns:repeat(4,1fr); gap:3px; }.beat-art { grid-template-columns:repeat(4,9px); gap:3px; }.beat-art i { height:22px; }.wave-art { gap:3px; transform:scale(.8); }.wave-art i { width:4px; }.cut-art { gap:2px; transform:scale(.8); }.cut-art i { width:3px; }.fx-art { gap:2px; transform:scale(.72); }.atelier-copy { grid-column:2; grid-row:1; }.description { grid-column:2; grid-row:2; margin:3px 0 9px; }.open { grid-column:2; grid-row:3; padding-top:8px; } }
-    @media(prefers-reduced-motion:reduce) { .atelier { transition:none; } }
-  </style>
+  <link rel="stylesheet" href="ateliers.css">
+  <link rel="stylesheet" href="lab-shared.css">
 </head>
 <body>
+  <a class="lab-skip" href="#contenu">Aller au contenu</a>
   <main>
-    <nav class="nav" aria-label="Outils musicaux">
-      <a href="ateliers.html" aria-current="page">Ateliers</a><a href="./">808 Beat Lab</a><a href="samples.html">Sample Cutter</a><a href="sequencer.html">Séquenceur</a><a href="effects.html">Effets</a>
-    </nav>
-    <header>
-      <p class="eyebrow">Explorer · Écouter · Jouer</p>
-      <h1>Ateliers musicaux</h1>
-      <p class="intro">Des outils interactifs pour jouer avec les rythmes, les sons et les idées musicales.</p>
+<header class="lab-header">
+      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
+        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>Beat Lab <b>808</b></span>
+      </a>
+      <nav class="lab-nav" aria-label="Ateliers musicaux">
+        <a href="ateliers.html" aria-current="page">Ateliers</a>
+        <a href="groove-mystere.html">Groove Mystère</a>
+        <a href="sequencer.html">Séquenceur de samples</a>
+        <a href="index.html">Boîte à rythmes 808</a>
+        <a href="samples.html">Découpeur audio</a>
+        <a href="effects.html">Effets audio</a>
+      </nav>
     </header>
+    <div class="hero">
+      <p class="eyebrow">Explorer · Écouter · Jouer</p>
+      <h1 id="contenu" tabindex="-1">Ateliers <span>musicaux</span></h1>
+      <p class="intro">Cinq ateliers musicaux pour entraîner ton oreille, créer des rythmes et donner une nouvelle vie à tes sons. Tout se passe dans ton navigateur.</p>
+    </div>
     <section aria-labelledby="atelier-title">
-      <div class="section-head"><h2 id="atelier-title">Les ateliers</h2><span class="section-note">Choisis un outil pour commencer</span></div>
+      <div class="section-head"><h2 id="atelier-title">Choisis ton atelier</h2><p>Un jeu, des rythmes, tes sons.</p></div>
       <div class="atelier-grid">
-        <a class="atelier featured" href="groove-mystere.html">
-          <div class="art" aria-hidden="true"><div class="simon"><div class="simon-grid"><i></i><i></i><i></i><i></i></div><div class="simon-center">GROOVE</div></div></div>
-          <div class="atelier-copy"><p class="tag">Jeu d’écoute</p><h3>Groove Mystère</h3></div>
-          <p class="description">Écoute une séquence de notes ou de percussions, puis reproduis-la.</p>
-          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
-        </a>
-        <a class="atelier" href="sequencer.html">
-          <div class="art" aria-hidden="true"><div class="step-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-          <div class="atelier-copy"><p class="tag">Rythme · Séquence</p><h3>Sample Sequencer</h3></div>
-          <p class="description">Compose un motif en plaçant des sons sur la grille.</p>
-          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
-        </a>
-        <a class="atelier" href="./">
-          <div class="art" aria-hidden="true"><div class="beat-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-          <div class="atelier-copy"><p class="tag">Boîte à rythmes</p><h3>808 Beat Lab</h3></div>
-          <p class="description">Construis une boucle avec des sons inspirés de la TR-808.</p>
-          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
-        </a>
-        <a class="atelier" href="samples.html">
-          <div class="art" aria-hidden="true"><div class="cut-art"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-          <div class="atelier-copy"><p class="tag">Audio · Découpage</p><h3>Sample Cutter</h3></div>
-          <p class="description">Écoute, découpe et exporte tes propres samples.</p>
-          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
-        </a>
-        <a class="atelier" href="effects.html">
-          <div class="art" aria-hidden="true"><div class="fx-art"><i></i><i></i><i></i></div></div>
-          <div class="atelier-copy"><p class="tag">Traitement audio</p><h3>Effets</h3></div>
-          <p class="description">Façonne tes sons avec filtre, saturation, écho et réverbération.</p>
-          <div class="open">Ouvrir l’atelier <span aria-hidden="true">↗</span></div>
-        </a>
+        <article class="atelier atelier--groove">
+          <div class="art"><svg viewBox="0 0 280 112" fill="none" aria-hidden="true" focusable="false"><circle cx="140" cy="56" r="46" fill="#080a09"/>
+<path d="M136 17a39 39 0 0 0-35 35h35Z" fill="#b6e65b"/><path d="M144 17a39 39 0 0 1 35 35h-35Z" fill="#f17b60"/>
+<path d="M101 60a39 39 0 0 0 35 35V60Z" fill="#efcb65"/><path d="M144 60v35a39 39 0 0 0 35-35Z" fill="#76caff"/>
+<circle cx="140" cy="56" r="17" fill="#242820" stroke="#080a09" stroke-width="4"/><path d="m136 49 11 7-11 7Z" fill="#f4f0df"/></svg></div>
+          <div class="atelier-copy"><p class="tag">Jeu d’écoute</p><h3 id="atelier-1">Groove Mystère</h3>
+          <p class="description">Écoute une suite de notes ou de percussions, puis reproduis-la. À chaque tour, mets ta mémoire musicale à l’épreuve.</p><p class="requirement">Aucun fichier à préparer</p></div>
+          <a class="atelier-link" href="groove-mystere.html" aria-describedby="atelier-1">Jouer à Groove Mystère<span aria-hidden="true">→</span></a>
+        </article>
+        <article class="atelier atelier--sequencer">
+          <div class="art"><svg viewBox="0 0 280 112" fill="none" aria-hidden="true" focusable="false"><rect x="34" y="24" width="22" height="17" rx="3" fill="#76caff"/><rect x="61" y="24" width="22" height="17" rx="3" fill="#303b40"/><rect x="88" y="24" width="22" height="17" rx="3" fill="#303b40"/><rect x="115" y="24" width="22" height="17" rx="3" fill="#303b40"/><rect x="142" y="24" width="22" height="17" rx="3" fill="#76caff"/><rect x="169" y="24" width="22" height="17" rx="3" fill="#303b40"/><rect x="196" y="24" width="22" height="17" rx="3" fill="#303b40"/><rect x="223" y="24" width="22" height="17" rx="3" fill="#303b40"/><rect x="34" y="47" width="22" height="17" rx="3" fill="#303b40"/><rect x="61" y="47" width="22" height="17" rx="3" fill="#303b40"/><rect x="88" y="47" width="22" height="17" rx="3" fill="#76caff"/><rect x="115" y="47" width="22" height="17" rx="3" fill="#303b40"/><rect x="142" y="47" width="22" height="17" rx="3" fill="#303b40"/><rect x="169" y="47" width="22" height="17" rx="3" fill="#303b40"/><rect x="196" y="47" width="22" height="17" rx="3" fill="#76caff"/><rect x="223" y="47" width="22" height="17" rx="3" fill="#303b40"/><rect x="34" y="70" width="22" height="17" rx="3" fill="#303b40"/><rect x="61" y="70" width="22" height="17" rx="3" fill="#76caff"/><rect x="88" y="70" width="22" height="17" rx="3" fill="#303b40"/><rect x="115" y="70" width="22" height="17" rx="3" fill="#76caff"/><rect x="142" y="70" width="22" height="17" rx="3" fill="#303b40"/><rect x="169" y="70" width="22" height="17" rx="3" fill="#76caff"/><rect x="196" y="70" width="22" height="17" rx="3" fill="#303b40"/><rect x="223" y="70" width="22" height="17" rx="3" fill="#76caff"/><path d="M69 16v78" stroke="#f4f0df" stroke-width="2"/><circle cx="69" cy="15" r="3" fill="#f4f0df"/></svg></div>
+          <div class="atelier-copy"><p class="tag">Compose avec tes sons</p><h3 id="atelier-2">Séquenceur de samples</h3>
+          <p class="description">Importe tes propres sons sur huit pistes. Place-les sur la grille, puis règle le volume, la panoramique et les effets.</p><p class="requirement">Tes fichiers audio · 8 pistes</p></div>
+          <a class="atelier-link" href="sequencer.html" aria-describedby="atelier-2">Composer avec mes samples<span aria-hidden="true">→</span></a>
+        </article>
+        <article class="atelier atelier--beat">
+          <div class="art"><svg viewBox="0 0 280 112" fill="none" aria-hidden="true" focusable="false"><rect x="32" y="16" width="216" height="81" rx="8" fill="#24251e" stroke="#696956"/>
+<rect x="44" y="27" width="62" height="18" rx="3" fill="#11130e"/><path d="M51 39v-6m6 6v-8m6 8v-5m6 5v-8m6 8v-6" stroke="#d8f36a" stroke-width="3"/>
+<path d="M44 54h192" stroke="#5c5e4f"/>
+<circle cx="176" cy="36" r="8" fill="#12130f" stroke="#ff8058" stroke-width="2"/><path d="m176 36 3-5" stroke="#ff8058" stroke-width="2"/>
+<circle cx="204" cy="36" r="8" fill="#12130f" stroke="#d8f36a" stroke-width="2"/><path d="m204 36-4-4" stroke="#d8f36a" stroke-width="2"/>
+<rect x="44" y="65" width="16" height="20" rx="3" fill="#ff8058"/><rect x="68" y="65" width="16" height="20" rx="3" fill="#ff8058"/><rect x="92" y="65" width="16" height="20" rx="3" fill="#edb85f"/><rect x="116" y="65" width="16" height="20" rx="3" fill="#edb85f"/><rect x="140" y="65" width="16" height="20" rx="3" fill="#d8f36a"/><rect x="164" y="65" width="16" height="20" rx="3" fill="#d8f36a"/><rect x="188" y="65" width="16" height="20" rx="3" fill="#d8f36a"/><rect x="212" y="65" width="16" height="20" rx="3" fill="#d8f36a"/></svg></div>
+          <div class="atelier-copy"><p class="tag">Sons de batterie intégrés</p><h3 id="atelier-3">Boîte à rythmes 808</h3>
+          <p class="description">Crée une boucle avec huit voix de batterie déjà disponibles. Choisis le kit TR-808 ou Industriel et programme tes pas.</p><p class="requirement">Prêt à jouer · 16 pas</p></div>
+          <a class="atelier-link" href="index.html" aria-describedby="atelier-3">Créer un rythme 808<span aria-hidden="true">→</span></a>
+        </article>
+        <article class="atelier atelier--cut">
+          <div class="art"><svg viewBox="0 0 280 112" fill="none" aria-hidden="true" focusable="false"><path d="M25 56h230" stroke="#36414a"/><path d="M34 50.0v12" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M44 45.0v22" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M54 37.0v38" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M64 43.0v26" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M74 30.0v52" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M84 21.0v70" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M94 36.0v40" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M104 42.0v28" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M114 47.0v18" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M124 34.0v44" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M134 26.0v60" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M144 38.0v36" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M154 46.0v20" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M164 30.0v52" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M174 19.0v74" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M184 35.0v42" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M194 45.0v22" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M204 38.0v36" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M214 47.0v18" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M224 51.0v10" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M234 53.0v6" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><path d="M244 54.0v4" stroke="#bd91fa" stroke-width="5" stroke-linecap="round"/><rect x="83" y="16" width="100" height="80" rx="3" fill="#ff805812"/><path d="M83 16v80m100-80v80" stroke="#ff8058" stroke-width="2"/><path d="m78 16 5 7 5-7m90 80 5-7 5 7" fill="#ff8058"/></svg></div>
+          <div class="atelier-copy"><p class="tag">Découpe un fichier</p><h3 id="atelier-4">Découpeur audio</h3>
+          <p class="description">Choisis un passage dans ton fichier audio, ajuste son début et sa fin, puis exporte cet extrait en WAV.</p><p class="requirement">Ton fichier audio · export WAV</p></div>
+          <a class="atelier-link" href="samples.html" aria-describedby="atelier-4">Découper un son<span aria-hidden="true">→</span></a>
+        </article>
+        <article class="atelier atelier--fx">
+          <div class="art"><svg viewBox="0 0 280 112" fill="none" aria-hidden="true" focusable="false"><path d="M37 27h126M37 56h126M37 85h126" stroke="#4d4941" stroke-width="4" stroke-linecap="round"/>
+<path d="M37 27h45M37 56h90M37 85h65" stroke="#ff8058" stroke-width="4" stroke-linecap="round"/>
+<rect x="76" y="18" width="12" height="18" rx="3" fill="#ff8058"/><rect x="121" y="47" width="12" height="18" rx="3" fill="#bd91fa"/><rect x="96" y="76" width="12" height="18" rx="3" fill="#76caff"/>
+<path d="M180 56c6-40 12-40 18 0s12 40 18 0 12-40 18 0 12 40 18 0" stroke="#76caff" stroke-width="3"/></svg></div>
+          <div class="atelier-copy"><p class="tag">Transforme un son</p><h3 id="atelier-5">Effets audio</h3>
+          <p class="description">Charge un fichier, écoute tes réglages en direct et exporte le résultat : filtre, saturation, écho et réverbération.</p><p class="requirement">Ton fichier audio · export WAV</p></div>
+          <a class="atelier-link" href="effects.html" aria-describedby="atelier-5">Transformer un son<span aria-hidden="true">→</span></a>
+        </article>
       </div>
     </section>
-    <p class="foot">Les fichiers audio restent sur ton appareil.</p>
+    <aside class="practical" aria-labelledby="practical-title">
+      <h2 id="practical-title">Avant de jouer</h2>
+      <div class="practical-grid">
+        <p><strong>Écoute confortablement.</strong> Un casque est conseillé. Commence à volume modéré et clique sur le bouton de lecture de l’atelier pour démarrer le son.</p>
+        <p><strong>Garde tes sons près de toi.</strong> Tes fichiers audio sont traités sur ton appareil. Les samples du séquenceur sont enregistrés dans ce navigateur, sur cet appareil.</p>
+      </div>
+    </aside>
+    <footer class="lab-footer"><p><strong>Beat Lab 808</strong> · Explorer, écouter, jouer.</p><a href="#contenu">Retour en haut <span aria-hidden="true">↑</span></a></footer>
   </main>
 </body>
 </html>

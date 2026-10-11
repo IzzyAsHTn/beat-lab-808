@@ -1,21 +1,21 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111315">
   <meta name="description" content="Deux jeux de mémoire musicale : une séquence qui s’allonge ou de nouveaux motifs à reproduire.">
-  <title>Groove mystère</title>
+  <title>Groove Mystère — Beat Lab 808</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23111315'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%23b6f36a' stroke-width='4'/%3E%3Ccircle cx='20' cy='20' r='3' fill='%23b6f36a'/%3E%3C/svg%3E">
   <style>
     :root { color-scheme:dark; --bg:#111315; --surface:#1a1e20; --line:#343a3d; --ink:#f2f2eb; --muted:#a5aaa5; --lime:#b6f36a; }
     * { box-sizing:border-box; }
     body { min-height:100vh; margin:0; background:radial-gradient(ellipse at 50% -30%, #293126 0, var(--bg) 58%); color:var(--ink); font:16px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
     main { width:min(620px,calc(100% - 32px)); margin:0 auto; padding:42px 0 60px; }
-    .site-nav { display:flex;flex-wrap:wrap;gap:8px;margin:0 0 25px; }
-    .site-nav a { padding:7px 11px;border:1px solid #48483e;border-radius:999px;color:var(--muted);font-size:12px;text-decoration:none; }
-    .site-nav a:hover { border-color:var(--lime);color:var(--ink); }
-    .site-nav a[aria-current="page"] { border-color:var(--lime);background:var(--lime);color:#17180f;font-weight:700; }
+
+
+
+
     header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:26px; }
     .brand { display:flex; align-items:center; gap:12px; }
     .mark { width:38px;height:38px;display:grid;place-items:center;border:1px solid #536448;border-radius:50%;color:var(--lime);font-size:19px; }
@@ -58,14 +58,27 @@
     @media(max-width:460px) { main{padding-top:27px}.game{padding:18px 14px}.topline{align-items:flex-start;flex-direction:column}.topline button{width:100%}.mode-row{align-items:stretch;flex-direction:column}.mode-switch{width:100%}.mode-choice{flex:1;padding:0 10px}.pads{gap:8px;padding:9px;border-width:6px}.pad{font-size:14px}.pad .glyph{font-size:20px}.pad .name{font-size:12px}.center-hub{border-width:6px}.status{font-size:14px} }
     @media(prefers-reduced-motion:reduce) { *,*::before,*::after{transition:none!important;scroll-behavior:auto!important} }
   </style>
+<link rel="stylesheet" href="lab-shared.css">
 </head>
 <body>
+<a class="lab-skip" href="#contenu">Aller au contenu</a>
   <main>
-    <nav class="site-nav" aria-label="Outils musicaux">
-      <a href="ateliers.html">Ateliers</a><a href="./">808 Beat Lab</a><a href="samples.html">Sample Cutter</a><a href="sequencer.html">Séquenceur</a><a href="effects.html">Effets</a>
-    </nav>
+    <header class="lab-header">
+      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
+        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>Beat Lab <b>808</b></span>
+      </a>
+      <nav class="lab-nav" aria-label="Ateliers musicaux">
+        <a href="ateliers.html">Ateliers</a>
+        <a href="groove-mystere.html" aria-current="page">Groove Mystère</a>
+        <a href="sequencer.html">Séquenceur de samples</a>
+        <a href="index.html">Boîte à rythmes 808</a>
+        <a href="samples.html">Découpeur audio</a>
+        <a href="effects.html">Effets audio</a>
+      </nav>
+    </header>
     <header>
-      <div class="brand"><div class="mark" aria-hidden="true">◉</div><div><p class="eyebrow">Atelier musical · 01</p><h1>Groove mystère</h1></div></div>
+      <div class="brand"><div class="mark" aria-hidden="true">◉</div><div><p class="eyebrow">Atelier musical · 01</p><h1 id="contenu" tabindex="-1">Groove Mystère</h1></div></div>
       <div class="level">Jeu <strong id="gameModeTitle">Simon musical</strong></div>
     </header>
     <section class="game" aria-label="Jeu de mémoire musicale">
@@ -98,7 +111,11 @@
       <p class="howto" id="howto">Chaque tour ajoute un coup. Une erreur termine la partie.</p>
     </section>
     <p class="footer">Deux façons de jouer · notes ou percussions · à toi de garder le rythme.</p>
-  </main>
+  <footer class="lab-footer">
+      <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p>
+      <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
+    </footer>
+</main>
   <script>
     const pads = [...document.querySelectorAll(".pad")];
     const statusLine = document.getElementById("status");

@@ -21,4 +21,8 @@ Le séquenceur enregistre automatiquement les motifs, réglages de mixage (volum
 
 ## Mise à jour sur GitHub Pages
 
-Décompresse l’archive du site et téléverse les fichiers à la racine du dépôt `IzzyAsHTn/beat-lab-808`. Pour cette mise à jour, remplace `index.html` et `README.md` et ajoute `industrial-clap.wav`. Valide avec **Commit changes**, puis attends le déploiement Pages.
+Les six pages partagent désormais la marque, les noms d’ateliers, la navigation et les styles de focus de `lab-shared.css`. La page d’accueil utilise aussi `ateliers.css`. Aucun outil de compilation n’est nécessaire.
+
+Pour intégrer cette version, fusionne la proposition GitHub après revue. Pour une installation manuelle, place les six fichiers HTML, `lab-shared.css`, `ateliers.css` et les deux WAV à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Les WAV fournis sont les originaux, inchangés.
+
+Pour vérifier localement : `python3 -m http.server 8080`, puis ouvre `http://localhost:8080/ateliers.html`. Un serveur HTTP permet de tester les fichiers audio et le stockage dans les conditions du site.
