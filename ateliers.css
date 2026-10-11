@@ -13,7 +13,6 @@ h2 { margin:0; font-size:20px; letter-spacing:-.015em; }
 .atelier-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:16px; }
 .atelier { --accent:#d8f36a; grid-column:span 2; position:relative; display:flex; flex-direction:column; min-width:0; padding:18px; border:1px solid #515146; border-radius:16px; background:linear-gradient(145deg,#22231d,#191a16); transition:transform .16s,border-color .16s; }
 .atelier:nth-child(-n+2) { grid-column:span 3; }
-.atelier--groove { border-color:#7c8a51; background:linear-gradient(145deg,#2a3021,#1a1c16); }
 .atelier--sequencer { --accent:#8cd2ff; }
 .atelier--beat { --accent:#f7ad76; }
 .atelier--cut { --accent:#c9a5fc; }
