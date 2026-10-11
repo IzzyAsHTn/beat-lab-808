@@ -1,0 +1,42 @@
+/* Shared navigation and accessibility. No JavaScript required. */
+:root { --muted:#bcbcaf; }
+.lab-header { display:block; margin:0 0 32px; }
+.lab-brand { display:inline-flex; align-items:center; gap:11px; min-height:44px; margin-bottom:20px; color:#f4f0df; text-decoration:none; font-size:19px; font-weight:750; letter-spacing:-.02em; }
+.lab-brand b { color:#d8f36a; }
+.lab-mark { width:40px; height:40px; flex:none; }
+.lab-nav { display:flex; flex-wrap:wrap; gap:8px; }
+.lab-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 14px; border:1px solid #626257; border-radius:999px; color:#c6c6b9; font-size:13px; font-weight:600; line-height:1.3; text-decoration:none; }
+.lab-nav a:hover { border-color:#d8f36a; color:#f4f0df; background:#282c20; }
+.lab-nav a[aria-current="page"],.lab-nav a[aria-current="page"]:hover { color:#17180f; background:#d8f36a; border-color:#d8f36a; }
+.lab-skip { position:fixed; z-index:20; top:10px; left:16px; transform:translateY(-160%); padding:12px 18px; border-radius:8px; background:#d8f36a; color:#17180f; font-weight:700; }
+.lab-skip:focus { transform:translateY(0); }
+/* This also restores focus outlines removed by original field styles. */
+body :is(a,button,input,select,summary,[tabindex="0"]):focus-visible { outline:3px solid #d8f36a; outline-offset:4px; }
+#contenu:focus { outline:none; }
+body h1 { letter-spacing:-.035em; line-height:1.08; overflow-wrap:break-word; }
+.lab-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-top:30px; padding-top:22px; border-top:1px solid #48483e; color:#bcbcaf; font-size:13px; }
+.lab-footer p { max-width:65ch; margin:0; }
+.lab-footer strong { color:#f4f0df; }
+.lab-footer a { display:inline-flex; align-items:center; gap:12px; min-height:44px; color:#d8f36a; text-underline-offset:4px; }
+body :is(.foot,.footer,.wavehelp,.step-head,.head,.tracklabel small) { color:#bcbcaf; }
+body .foot { font-size:12px; line-height:1.6; }
+body :is(.row,.transport,.topbar,.field) { min-width:0; }
+body .field { max-width:100%; }
+body .field input[type="file"] { max-width:100%; }
+.render-controls { margin-top:20px; }
+body :is(.status,.persist,#name) { overflow-wrap:anywhere; }
+body .drop:focus-within { outline:3px solid #d8f36a; outline-offset:4px; }
+/* Grid transport labels retain their compact layout; individual targets grow. */
+body .voice-toggle { flex:0 0 25px; width:25px; min-width:25px; height:25px; font-size:10px; color:#c6c6b9; }
+@media (max-width:600px) {
+  .lab-header { margin-bottom:26px; }
+  .lab-brand { margin-bottom:15px; }
+  .lab-nav { gap:6px; }
+  .lab-nav a { padding:10px 12px; font-size:12px; }
+  .lab-footer { align-items:flex-start; }
+  /* Three fixed-size controls need more room than the original 74px label. */
+  .machine :is(.step-head,.track) { grid-template-columns:92px repeat(16,minmax(21px,1fr)); }
+}
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; }
+}
