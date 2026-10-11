@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#303626"/><stop offset="1" stop-color="#11110f"/></linearGradient></defs>
+<rect width="1200" height="630" fill="url(#bg)"/>
+<g transform="translate(72 60) scale(2)"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></g>
+<g font-family="Arial, Helvetica, sans-serif">
+<text x="180" y="120" fill="#f4f0df" font-size="56" font-weight="700">Beat Lab <tspan fill="#d8f36a">808</tspan></text>
+<text x="72" y="225" fill="#f4f0df" font-size="60" font-weight="700">Cinq ateliers musicaux</text>
+<text x="72" y="285" fill="#bcbcaf" font-size="30">Écoute, compose et transforme tes sons.</text>
+<rect x="72" y="350" width="54" height="40" rx="7" fill="#d8f36a"/>
+<rect x="138" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="204" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="270" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="336" y="350" width="54" height="40" rx="7" fill="#d8f36a"/>
+<rect x="402" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="468" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="534" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="600" y="350" width="54" height="40" rx="7" fill="#d8f36a"/>
+<rect x="666" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="732" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="798" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="864" y="350" width="54" height="40" rx="7" fill="#d8f36a"/>
+<rect x="930" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="996" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="1062" y="350" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="72" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="138" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="204" y="404" width="54" height="40" rx="7" fill="#8cd2ff"/>
+<rect x="270" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="336" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="402" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="468" y="404" width="54" height="40" rx="7" fill="#8cd2ff"/>
+<rect x="534" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="600" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="666" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="732" y="404" width="54" height="40" rx="7" fill="#8cd2ff"/>
+<rect x="798" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="864" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="930" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="996" y="404" width="54" height="40" rx="7" fill="#8cd2ff"/>
+<rect x="1062" y="404" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="72" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="138" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="204" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="270" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="336" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="402" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="468" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="534" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="600" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="666" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="732" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="798" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="864" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="930" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<rect x="996" y="458" width="54" height="40" rx="7" fill="#ff9b7a"/>
+<rect x="1062" y="458" width="54" height="40" rx="7" fill="#36382e"/>
+<text x="72" y="566" fill="#bcbcaf" font-size="25">Dans ton navigateur · Tes sons restent sur ton appareil</text>
+</g></svg>

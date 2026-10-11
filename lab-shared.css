@@ -1,5 +1,6 @@
 /* Shared navigation and accessibility. No JavaScript required. */
 :root { --muted:#bcbcaf; }
+.lab-shell > main { display:flow-root; }
 .lab-header { display:block; margin:0 0 32px; }
 .lab-brand { display:inline-flex; align-items:center; gap:11px; min-height:44px; margin-bottom:20px; color:#f4f0df; text-decoration:none; font-size:19px; font-weight:750; letter-spacing:-.02em; }
 .lab-brand b { color:#d8f36a; }

@@ -5,16 +5,30 @@
   <title>Découpeur audio — Beat Lab 808</title>
   <style>
     :root{color-scheme:dark;--bg:#11110f;--panel:#1b1b18;--line:#393932;--muted:#aaa99e;--text:#f4f0df;--acid:#d8f36a;--orange:#ff8058;--blue:#76caff}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}main{width:min(100% - 32px,980px);margin:0 auto;padding:38px 0 36px}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--blue);font-weight:700;text-transform:uppercase}h1{font-size:clamp(40px,8vw,72px);line-height:.95;letter-spacing:-.07em;margin:10px 0 12px}h1 span{color:var(--blue)}.intro{color:var(--muted);max-width:650px;margin:0 0 26px}.card{background:linear-gradient(145deg,#20201b,#171714);border:1px solid #48483e;border-radius:18px;padding:clamp(16px,4vw,28px);box-shadow:0 24px 80px #0007}.drop{display:flex;align-items:center;justify-content:center;text-align:center;min-height:132px;border:1px dashed #69695e;border-radius:12px;background:#25251f;color:var(--muted);cursor:pointer;padding:18px;transition:.15s}.drop:hover,.drop.drag{border-color:var(--blue);background:#252a2d}.drop strong{color:var(--text)}.drop input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}.fileline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 0;color:var(--muted);font-size:12px}.filename{color:var(--text);font-weight:650;overflow-wrap:anywhere}.wavebox{margin-top:20px;border:1px solid #3d3d36;border-radius:10px;overflow:hidden;background:#141411}.wavebox canvas{width:100%;height:260px;display:block;touch-action:none;cursor:crosshair}.wavehelp{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#858579;font-size:11px;margin-top:8px}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}.timefield{background:#20201b;border:1px solid #393932;border-radius:10px;padding:12px}.timefield label{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}.timefield input{width:100%;background:transparent;border:0;color:var(--text);font:700 19px ui-monospace,monospace;outline:none}.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:17px}.btn{border:1px solid #55554a;color:var(--text);background:transparent;border-radius:9px;padding:10px 14px;font:inherit;cursor:pointer}.btn:hover{border-color:var(--blue)}.btn.primary{background:var(--blue);border-color:var(--blue);color:#101820;font-weight:800}.btn.primary:hover{filter:brightness(1.08)}.btn:disabled{opacity:.42;cursor:not-allowed}.readout{font:12px ui-monospace,monospace;color:var(--blue);margin-left:auto}.tip{border-top:1px solid var(--line);margin-top:22px;padding-top:16px;color:var(--muted);font-size:12px}.tip strong{color:var(--text)}.foot{margin-top:16px;text-align:center;color:#77776c;font-size:11px}.toast{min-height:20px;margin-top:9px;color:var(--acid);font-size:12px}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -15%,#37392b 0,transparent 46%),var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}.lab-shell{width:min(100% - 32px,980px);margin:0 auto;padding:38px 0 36px}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--blue);font-weight:700;text-transform:uppercase}h1{font-size:clamp(40px,8vw,72px);line-height:.95;letter-spacing:-.07em;margin:10px 0 12px}h1 span{color:var(--blue)}.intro{color:var(--muted);max-width:650px;margin:0 0 26px}.card{background:linear-gradient(145deg,#20201b,#171714);border:1px solid #48483e;border-radius:18px;padding:clamp(16px,4vw,28px);box-shadow:0 24px 80px #0007}.drop{display:flex;align-items:center;justify-content:center;text-align:center;min-height:132px;border:1px dashed #69695e;border-radius:12px;background:#25251f;color:var(--muted);cursor:pointer;padding:18px;transition:.15s}.drop:hover,.drop.drag{border-color:var(--blue);background:#252a2d}.drop strong{color:var(--text)}.drop input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}.fileline{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 0;color:var(--muted);font-size:12px}.filename{color:var(--text);font-weight:650;overflow-wrap:anywhere}.wavebox{margin-top:20px;border:1px solid #3d3d36;border-radius:10px;overflow:hidden;background:#141411}.wavebox canvas{width:100%;height:260px;display:block;touch-action:none;cursor:crosshair}.wavehelp{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#858579;font-size:11px;margin-top:8px}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:22px}.timefield{background:#20201b;border:1px solid #393932;border-radius:10px;padding:12px}.timefield label{display:block;color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px}.timefield input{width:100%;background:transparent;border:0;color:var(--text);font:700 19px ui-monospace,monospace;outline:none}.transport{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:17px}.btn{border:1px solid #55554a;color:var(--text);background:transparent;border-radius:9px;padding:10px 14px;font:inherit;cursor:pointer}.btn:hover{border-color:var(--blue)}.btn.primary{background:var(--blue);border-color:var(--blue);color:#101820;font-weight:800}.btn.primary:hover{filter:brightness(1.08)}.btn:disabled{opacity:.42;cursor:not-allowed}.readout{font:12px ui-monospace,monospace;color:var(--blue);margin-left:auto}.tip{border-top:1px solid var(--line);margin-top:22px;padding-top:16px;color:var(--muted);font-size:12px}.tip strong{color:var(--text)}.foot{margin-top:16px;text-align:center;color:#77776c;font-size:11px}.toast{min-height:20px;margin-top:9px;color:var(--acid);font-size:12px}
     .gain-control{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.gain-control input{width:92px;accent-color:var(--blue)}.gain-control output{color:var(--text);font:12px ui-monospace,monospace;min-width:32px}
-    @media(max-width:600px){main{padding-top:26px}.wavebox canvas{height:205px}.controls{gap:9px}.timefield{padding:10px}.timefield input{font-size:16px}.readout{width:100%;margin:0}.gain-control{width:100%}}
+    @media(max-width:600px){.lab-shell{padding-top:26px}.wavebox canvas{height:205px}.controls{gap:9px}.timefield{padding:10px}.timefield input{font-size:16px}.readout{width:100%;margin:0}.gain-control{width:100%}}
   </style>
 <link rel="stylesheet" href="lab-shared.css">
 <meta name="description" content="Découpe tes fichiers audio et exporte une sélection en WAV, directement dans ton navigateur.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" type="image/png" href="favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="Beat Lab 808">
+<meta property="og:title" content="Découpeur audio — Beat Lab 808">
+<meta property="og:description" content="Découpe tes fichiers audio et exporte une sélection en WAV, directement dans ton navigateur.">
+<meta property="og:url" content="https://izzyashtn.github.io/beat-lab-808/samples.html">
+<meta property="og:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
 <a class="lab-skip" href="#contenu">Aller au contenu</a>
-<main>
+<div class="lab-shell">
   <header class="lab-header">
       <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
         <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
@@ -29,8 +43,9 @@
         <a href="effects.html">Effets audio</a>
       </nav>
     </header>
+<main id="contenu" tabindex="-1">
   <div class="eyebrow">Découpeur de sons · fichiers locaux · sans envoi</div>
-  <h1 id="contenu" tabindex="-1">Découpeur <span>audio</span></h1>
+  <h1>Découpeur <span>audio</span></h1>
   <p class="intro">Écoute un son, sélectionne le passage qui t’intéresse et exporte-le en WAV pour le glisser dans Logic Pro ou ton sampler.</p>
   <section class="card">
     <label class="drop" id="drop"><input id="file" type="file" accept="audio/*"><span><strong>Choisir un fichier audio</strong><br>ou glisser-déposer un sample ici<br><small>Le fichier reste sur ton appareil.</small></span></label>
@@ -43,11 +58,12 @@
     <div class="tip"><strong>Workflow :</strong> isole une attaque de guitare ou une texture, puis importe le WAV dans Logic Pro pour le resampler, le renverser ou le traiter.</div>
   </section>
   <p class="foot">Décodage, écoute et export se font dans ton navigateur. Le fichier audio n’est pas téléversé vers GitHub.</p>
+</main>
 <footer class="lab-footer">
       <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p><a href="https://github.com/IzzyAsHTn/beat-lab-808">Code source sur GitHub</a>
       <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
     </footer>
-</main>
+</div>
 <script>
 (() => {
   const fileInput=document.querySelector('#file'),drop=document.querySelector('#drop'),canvas=document.querySelector('#wave'),g=canvas.getContext('2d'),startInput=document.querySelector('#start'),endInput=document.querySelector('#end'),playButton=document.querySelector('#play'),stopButton=document.querySelector('#stop'),exportButton=document.querySelector('#export'),resetButton=document.querySelector('#reset'),testButton=document.querySelector('#test'),gainInput=document.querySelector('#gain'),gainValue=document.querySelector('#gain-value'),filename=document.querySelector('#filename'),meta=document.querySelector('#meta'),position=document.querySelector('#position'),message=document.querySelector('#message');
