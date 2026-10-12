@@ -63,6 +63,8 @@ function saveScores() {
 let mode = "drums";
 let gameMode = "simon";
 let audioContext;
+let limiterContext;
+let masterLimiter;
 let sequence = [];
 let inputIndex = 0;
 let completedPatterns = 0;
@@ -70,6 +72,24 @@ let phase = "idle";
 let tempo = 630;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function prefersReducedMotion() {
+  return Boolean(
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+  );
+}
+function getMasterLimiter(ctx) {
+  if (limiterContext !== ctx) {
+    limiterContext = ctx;
+    masterLimiter = ctx.createDynamicsCompressor();
+    masterLimiter.threshold.value = -1;
+    masterLimiter.knee.value = 0;
+    masterLimiter.ratio.value = 20;
+    masterLimiter.attack.value = 0.003;
+    masterLimiter.release.value = 0.12;
+    masterLimiter.connect(ctx.destination);
+  }
+  return masterLimiter;
+}
 function updateStatus(message) {
   statusLine.innerHTML = message;
 }
@@ -230,6 +250,7 @@ function trackSound(node) {
 }
 function scheduleSound(id, ctx) {
   const now = ctx.currentTime;
+  const output = getMasterLimiter(ctx);
   if (mode === "notes") {
     const osc = trackSound(ctx.createOscillator()),
       filter = ctx.createBiquadFilter(),
@@ -242,7 +263,7 @@ function scheduleSound(id, ctx) {
     gain.gain.setValueAtTime(0.001, now);
     gain.gain.exponentialRampToValueAtTime(0.13, now + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
-    osc.connect(filter).connect(gain).connect(ctx.destination);
+    osc.connect(filter).connect(gain).connect(output);
     osc.start(now);
     osc.stop(now + 0.35);
     return;
@@ -255,7 +276,7 @@ function scheduleSound(id, ctx) {
     osc.frequency.exponentialRampToValueAtTime(45, now + 0.13);
     gain.gain.setValueAtTime(0.8, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain).connect(output);
     osc.start(now);
     osc.stop(now + 0.25);
   } else if (id === 2) {
@@ -275,7 +296,7 @@ function scheduleSound(id, ctx) {
     filter.frequency.value = 6500;
     gain.gain.setValueAtTime(0.24, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    source.connect(filter).connect(gain).connect(ctx.destination);
+    source.connect(filter).connect(gain).connect(output);
     source.start(now);
   } else {
     const duration = id === 1 ? 0.16 : 0.11,
@@ -295,7 +316,7 @@ function scheduleSound(id, ctx) {
     filter.Q.value = id === 1 ? 0.7 : 0.45;
     gain.gain.setValueAtTime(id === 1 ? 0.45 : 0.33, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    source.connect(filter).connect(gain).connect(ctx.destination);
+    source.connect(filter).connect(gain).connect(output);
     source.start(now);
     if (id === 1) {
       const osc = trackSound(ctx.createOscillator()),
@@ -304,7 +325,7 @@ function scheduleSound(id, ctx) {
       osc.frequency.value = 180;
       tone.gain.setValueAtTime(0.2, now);
       tone.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-      osc.connect(tone).connect(ctx.destination);
+      osc.connect(tone).connect(output);
       osc.start(now);
       osc.stop(now + 0.1);
     }
@@ -314,11 +335,13 @@ function scheduleSound(id, ctx) {
 async function flash(id, duration = 190, token = session.version()) {
   if (!session.current(token)) return;
   const pad = pads[id],
-    version = ++flashVersions[id];
-  pad.classList.add("is-lit");
+    version = ++flashVersions[id],
+    showFlash = !prefersReducedMotion();
+  if (showFlash) pad.classList.add("is-lit");
   makeSound(id, token);
   await wait(duration);
-  if (flashVersions[id] === version) pad.classList.remove("is-lit");
+  if (showFlash && flashVersions[id] === version)
+    pad.classList.remove("is-lit");
 }
 
 async function playSequence(token = session.version()) {

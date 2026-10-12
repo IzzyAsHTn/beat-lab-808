@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 const root = path.resolve(
@@ -9,6 +10,18 @@ const root = path.resolve(
     path.join(path.dirname(fileURLToPath(import.meta.url)), ".."),
 );
 const core = createRequire(import.meta.url)(path.join(root, "lab-core.js"));
+for (const htmlName of fs.readdirSync(root).filter((name) => name.endsWith(".html"))) {
+  const html = fs.readFileSync(path.join(root, htmlName), "utf8");
+  for (const [, asset, version] of html.matchAll(
+    /(?:src|href)="([^"]+\.(?:css|js))\?v=([a-f0-9]+)"/g,
+  )) {
+    const digest = createHash("sha256")
+      .update(fs.readFileSync(path.join(root, asset)))
+      .digest("hex")
+      .slice(0, version.length);
+    assert.equal(version, digest, `${htmlName} cache version for ${asset}`);
+  }
+}
 await (async () => {
   let audioDuration = 121;
   class AudioProbe {
