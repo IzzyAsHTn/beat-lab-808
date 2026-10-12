@@ -1,96 +1,69 @@
-/* Readable controls and responsive step grids for the two rhythm tools. */
+/* Original horizontal grids, with readable controls and keyboard accessibility. */
 body[data-tool] .grid-help,
 body[data-tool] .persist { color:#bcbcaf; font-size:14px; line-height:1.6; }
-body[data-tool] .grid-help { margin:16px 0 8px; }
+body[data-tool] .grid-help { margin:12px 0 8px; }
 body[data-tool] .step-row { display:contents; }
 body[data-tool] .pad { border-color:#8d8d7d; }
 body[data-tool] .pad.on { border-color:var(--tone); }
 body[data-tool] .status { font-size:13px; }
+body[data-tool] :is(.seq,.gridwrap) { overscroll-behavior-x:contain; scrollbar-color:#8d8d7d #20201b; }
+/* Leave room for the focus outline at either edge of the scrollable grid. */
+body[data-tool="drums"] .seq { padding:20px 7px 7px; }
+body[data-tool="sequencer"] .gridwrap { padding:7px; }
 
-body[data-tool="sequencer"] .head,
-body[data-tool="sequencer"] .track {
-  grid-template-columns:320px repeat(var(--step-count,16),34px);
-  gap:8px;
-}
-body[data-tool="sequencer"] .track { margin:20px 0; grid-template-rows:auto auto auto; }
-body[data-tool="sequencer"] .trackmix { height:auto; min-height:88px; gap:10px; }
-body[data-tool="sequencer"] .tracktoggles { gap:6px; }
-body[data-tool="sequencer"] .track-toggle { min-width:44px; min-height:44px; font-size:12px; padding:6px; }
-body[data-tool="sequencer"] .mixcontrols { gap:8px; }
-body[data-tool="sequencer"] .mixcontrol { font-size:12px; line-height:1.4; grid-template-rows:auto 44px; gap:4px; }
-body[data-tool="sequencer"] .mixcontrol output { font-size:12px; }
-body[data-tool="sequencer"] .mixcontrol input { height:44px; }
-body[data-tool="sequencer"] .mixcontrol input::-webkit-slider-thumb { width:18px; height:18px; margin-top:-8px; }
-body[data-tool="sequencer"] .mixcontrol input::-moz-range-thumb { width:18px; height:18px; }
-body[data-tool="sequencer"] .pan-title { gap:4px; }
-body[data-tool="sequencer"] .pan-reset { width:32px; height:32px; flex:none; font-size:16px; color:#f4f0df; }
-body[data-tool="sequencer"] .sampleline { flex-wrap:wrap; gap:8px; margin-top:8px; }
-body[data-tool="sequencer"] .sampleline input { width:185px; max-width:100%; font-size:13px; min-height:32px; }
-body[data-tool="sequencer"] .filename { max-width:100%; font-size:13px; color:#bcbcaf; }
-body[data-tool="sequencer"] .btn.small { font-size:13px; min-height:44px; padding:8px; }
-body[data-tool="sequencer"] .trackname { font-size:14px; }
-body[data-tool="sequencer"] .fx summary { font-size:13px; min-height:44px; padding:10px; }
-body[data-tool="sequencer"] .fxgrid { gap:12px; padding:12px 4px; }
-body[data-tool="sequencer"] .fxcontrol { font-size:13px; line-height:1.4; }
-body[data-tool="sequencer"] .fxcontrol output { font-size:12px; }
-body[data-tool="sequencer"] .fxcontrol input { height:44px; }
-body[data-tool="sequencer"] .fxcontrol input::-webkit-slider-thumb { width:18px; height:18px; margin-top:-8px; }
-body[data-tool="sequencer"] .fxcontrol input::-moz-range-thumb { width:18px; height:18px; }
-body[data-tool="sequencer"] .fxhint { font-size:13px; line-height:1.6; padding:12px; }
-body[data-tool="sequencer"] .head { font-size:12px; }
-body[data-tool="sequencer"] .pad { height:34px; }
+/* Keep the original 92px voice column and the original pad proportions. */
+body[data-tool="drums"] .tuning { width:86px; gap:2px; }
+body[data-tool="drums"] .tuning input { width:84px; height:24px; }
+body[data-tool="drums"] .tuning output { font-size:11px; line-height:1.3; color:#bcbcaf; }
+body[data-tool="drums"] .name { font-size:12px; }
+body[data-tool="drums"] .tuning input::-webkit-slider-thumb { width:12px; height:10px; margin-top:-4px; }
+body[data-tool="drums"] .tuning input::-moz-range-thumb { width:12px; height:10px; }
 
-body[data-tool="drums"] .step-head,
-body[data-tool="drums"] .track { grid-template-columns:170px repeat(16,minmax(30px,1fr)); gap:8px; }
-body[data-tool="drums"] .grid { min-width:778px; }
-body[data-tool="drums"] .name { font-size:13px; }
-body[data-tool="drums"] .voice-toggle { flex:0 0 44px; width:44px; min-width:44px; height:44px; font-size:13px; }
-body[data-tool="drums"] .voice-tools { gap:8px; margin-top:8px; }
-body[data-tool="drums"] .tuning { width:150px; margin-top:6px; }
-body[data-tool="drums"] .tuning input { width:150px; height:44px; }
-body[data-tool="drums"] .tuning input::-webkit-slider-thumb { width:18px; height:18px; margin-top:-8px; }
-body[data-tool="drums"] .tuning input::-moz-range-thumb { width:18px; height:18px; }
-body[data-tool="drums"] .tuning output { font-size:12px; line-height:1.4; color:#bcbcaf; }
-body[data-tool="drums"] .track { margin:20px 0; }
-
-@media (max-width:800px) {
-  body[data-tool] .grid { width:100%; min-width:0; }
-  body[data-tool] .head,
-  body[data-tool] .step-head { display:none; }
-  body[data-tool] .gridwrap,
-  body[data-tool] .seq { overflow:visible; padding:0; }
-  body[data-tool] .track { display:block; width:100%; padding:16px 0; margin:0; border-bottom:1px solid #515146; }
-  body[data-tool] .track:last-child { border-bottom:0; }
-  body[data-tool] .step-row {
-    display:grid;
-    grid-template-columns:repeat(var(--step-count,16),minmax(36px,1fr));
-    gap:8px;
-    width:100%;
-    overflow-x:auto;
-    overscroll-behavior-x:contain;
-    padding:8px 6px 14px;
-    margin-top:10px;
-    scrollbar-color:#8d8d7d #20201b;
-  }
-  body[data-tool] .pad { grid-row:auto; height:36px; min-width:36px; font-size:12px; color:#d3d3c4; }
-  body[data-tool] .pad::after { content:attr(data-step); }
-  body[data-tool] .pad.on { color:#17180f; font-weight:750; }
-  body[data-tool] .pad.measure::before,
-  body[data-tool] .divider::after { display:none; }
-  body[data-tool="sequencer"] .tracklabel { display:block; }
-  body[data-tool="sequencer"] .trackmix { display:block; margin:12px 0; }
-  body[data-tool="sequencer"] .tracktoggles { margin-bottom:10px; }
-  body[data-tool="sequencer"] .mixcontrols { width:100%; gap:16px; }
-  body[data-tool="sequencer"] .pan-reset { width:44px; height:44px; }
-  body[data-tool="sequencer"] .fx { margin:8px 0; }
-  body[data-tool="drums"] .name { display:flex; flex-wrap:wrap; gap:8px 16px; }
-  body[data-tool="drums"] .voice-name { flex-basis:100%; font-size:14px; }
-  body[data-tool="drums"] .voice-tools { margin:0; }
-  body[data-tool="drums"] .tuning { flex:1; min-width:140px; margin:0; }
-  body[data-tool="drums"] .tuning input { width:100%; }
-}
-body[data-tool="sequencer"] .sampleline { display:grid; grid-template-columns:minmax(0,1fr) auto; }
-body[data-tool="sequencer"] .sampleline input { grid-column:1/-1; width:100%; min-height:44px; }
-body[data-tool="sequencer"] .sampleline input::file-selector-button { min-height:44px; font:inherit; }
-body[data-tool="sequencer"] .filename { white-space:normal; overflow-wrap:anywhere; }
+/* Keep the original 245px track column, 34px pads and 4px column gaps. */
+body[data-tool="sequencer"] .track { grid-template-rows:auto 48px auto; }
+body[data-tool="sequencer"] .trackmix { height:48px; gap:6px; }
+body[data-tool="sequencer"] .tracktoggles { gap:4px; }
+body[data-tool="sequencer"] .track-toggle { min-width:34px; min-height:32px; padding:4px; font-size:10.5px; }
+body[data-tool="sequencer"] .mixcontrols { grid-template-columns:minmax(0,.85fr) minmax(0,1fr); gap:8px; }
+body[data-tool="sequencer"] .mixcontrol { grid-template-columns:minmax(0,1fr) auto; grid-template-rows:24px 24px; gap:0 2px; font-size:11px; line-height:1.2; }
+body[data-tool="sequencer"] .mixcontrol > span { grid-column:1; grid-row:1; }
+body[data-tool="sequencer"] .mixcontrol output { grid-column:2; grid-row:1; font-size:10.5px; }
+body[data-tool="sequencer"] .mixcontrol input { grid-column:1/-1; grid-row:2; height:24px; }
+body[data-tool="sequencer"] .pan-title { gap:2px; }
+body[data-tool="sequencer"] .pan-reset { flex:none; width:24px; height:24px; font-size:14px; color:#f4f0df; }
+body[data-tool="sequencer"] .sampleline { display:grid; grid-template-columns:126px minmax(0,1fr) auto; gap:4px; margin:4px 0; }
+body[data-tool="sequencer"] .sampleline input { width:126px; max-width:100%; min-height:28px; font-size:12px; }
+body[data-tool="sequencer"] .sampleline input::file-selector-button { min-height:28px; font:inherit; }
+body[data-tool="sequencer"] .filename { max-width:100%; font-size:12px; color:#bcbcaf; }
+body[data-tool="sequencer"] .btn.small { min-height:28px; padding:4px 6px; font-size:12px; }
 body[data-tool="sequencer"] .btn:disabled { opacity:.5; cursor:not-allowed; }
+body[data-tool="sequencer"] .fx summary { min-height:28px; padding:5px 6px; font-size:11px; }
+body[data-tool="sequencer"] .fxgrid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:8px 4px; }
+body[data-tool="sequencer"] .fxcontrol { min-width:0; font-size:12px; line-height:1.4; }
+body[data-tool="sequencer"] .fxcontrol span { flex-wrap:wrap; }
+body[data-tool="sequencer"] .fxcontrol output { margin-left:auto; }
+body[data-tool="sequencer"] .fxcontrol output { font-size:11px; }
+body[data-tool="sequencer"] .fxcontrol input { height:24px; }
+body[data-tool="sequencer"] .fxhint { font-size:13px; line-height:1.6; }
+body[data-tool="sequencer"] .head { font-size:11px; }
+
+@media (max-width:650px) {
+  /* Keep all tracks aligned in one horizontal grid on small screens too. */
+  body[data-tool="sequencer"] .head,
+  body[data-tool="sequencer"] .track { grid-template-columns:180px repeat(var(--step-count,16),var(--pad-size,30px)); }
+  body[data-tool="sequencer"] .track { grid-template-rows:auto 98px auto; }
+  body[data-tool="sequencer"] .trackmix { height:98px; flex-wrap:wrap; gap:6px; align-content:start; }
+  body[data-tool="sequencer"] .mixcontrols { flex-basis:100%; }
+  body[data-tool="sequencer"] .track-toggle { min-width:44px; min-height:44px; font-size:12px; }
+  body[data-tool="sequencer"] .sampleline { grid-template-columns:minmax(0,1fr) auto; }
+  body[data-tool="sequencer"] .sampleline input { grid-column:1/-1; width:100%; min-height:44px; }
+  body[data-tool="sequencer"] .sampleline input::file-selector-button { min-height:44px; }
+  body[data-tool="sequencer"] .btn.small { min-height:44px; }
+  body[data-tool="sequencer"] .fx summary { min-height:44px; }
+  body[data-tool="drums"] .step-head,
+  body[data-tool="drums"] .track { grid-template-columns:144px repeat(16,minmax(30px,1fr)); gap:6px; }
+  body[data-tool="drums"] .grid { min-width:720px; }
+  body[data-tool="drums"] .voice-toggle { flex:0 0 44px; width:44px; min-width:44px; height:44px; font-size:12px; }
+  body[data-tool="drums"] .tuning { width:138px; }
+  body[data-tool="drums"] .tuning input { width:136px; height:32px; }
+}
