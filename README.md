@@ -15,13 +15,9 @@ Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte
 
 Le séquenceur enregistre automatiquement les motifs, réglages de mixage (volume, panoramique, Mute, Solo), effets et samples que tu importes dans le stockage local du navigateur (IndexedDB et stockage local). Ils sont conservés quand tu navigues vers un autre outil puis reviens, sur le même navigateur et le même appareil. Les fichiers que tu importes ne sont pas envoyés sur GitHub. Effacer les données du site dans le navigateur efface aussi ces samples.
 
-## Ancien échantillon archivé
-
-`clap-real.wav` est conservé dans le dépôt comme ancienne ressource, mais n'est plus chargé ni utilisé par les kits. Le clap Industriel utilise désormais le fichier audio fourni pour ce projet, `industrial-clap.wav`.
-
 ## Licences et attribution audio
 
-Le code du projet est publié sous licence MIT ; voir [`LICENSE`](LICENSE). Cette licence ne couvre pas les fichiers audio. Les métadonnées internes de `clap-real.wav` portent la mention « Copyright - Marc Van Bork 2006-2007 » ; le dépôt ne précise ni sa source d'origine ni ses conditions de licence. `industrial-clap.wav` ne contient pas de métadonnée de créateur ou de licence exploitable. La provenance et les conditions de réutilisation de ces deux sons restent à confirmer. Ne présume pas qu'ils sont librement redistribuables.
+Le code du projet est publié sous licence MIT ; voir [`LICENSE`](LICENSE). Cette licence ne couvre pas les fichiers audio. `industrial-clap.wav` ne contient pas de métadonnée de créateur ou de licence exploitable. Sa provenance et ses conditions de réutilisation restent à confirmer ; ne présume pas que ce son est librement redistribuable.
 
 ## Compatibilité navigateurs
 
@@ -31,7 +27,7 @@ Le site cible les versions récentes de Chrome, Edge, Firefox et Safari sur ordi
 
 Les six pages partagent la marque, les noms d’ateliers, la navigation et les styles de focus de `lab-shared.css`. Le bandeau, le contenu principal et le pied de page sont des repères distincts ; le lien d’évitement donne le focus à `main#contenu`. La page d’accueil utilise aussi `ateliers.css`. Aucun outil de compilation n’est nécessaire.
 
-Pour une installation manuelle, copie tous les fichiers HTML, CSS et JS du site ainsi que les deux WAV, `favicon.svg`, `favicon.png`, `partage.svg` et `partage.png` à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Les WAV fournis sont les originaux, inchangés.
+Pour une installation manuelle, copie tous les fichiers HTML, CSS et JS du site ainsi que `industrial-clap.wav`, `favicon.svg`, `favicon.png`, `partage.svg` et `partage.png` à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Le fichier audio fourni est l’original, inchangé.
 
 Les six pages déclarent la même favicon (SVG avec PNG de secours), un titre et une description Open Graph propres à chaque atelier, leur URL publique et une image de partage commune `partage.png` de 1200 × 630 px. `partage.svg` conserve sa source vectorielle. Si le site change de domaine ou de chemin, mets à jour les URL absolues `og:url` et `og:image` dans les six pages. Les images PNG sont fournies : aucune conversion n’est nécessaire pour publier le site.
 
