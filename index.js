@@ -176,6 +176,7 @@
     ).join("");
   grid.append(head);
   const voiceGains = {};
+  let masterLimiter = null;
   function audible(track) {
     const hasSolo = tracks.some((item) => item.solo);
     return !track.muted && (!hasSolo || track.solo);
@@ -184,7 +185,7 @@
     if (!voiceGains[id]) {
       const bus = ctx.createGain();
       bus.gain.value = audible(tracks.find((track) => track.id === id)) ? 1 : 0;
-      bus.connect(ctx.destination);
+      bus.connect(masterLimiter || ctx.destination);
       voiceGains[id] = bus;
     }
     return voiceGains[id];
@@ -265,6 +266,8 @@
     );
     clearTrackButton.title = `${track.label} : effacer tous les pas`;
     clearTrackButton.addEventListener("click", () => {
+      if (!window.confirm(`Effacer les pas de la piste ${track.label} ?`))
+        return;
       track.steps.fill(0);
       cells[ti].forEach((pad, si) => {
         pad.classList.remove("on");
@@ -363,9 +366,39 @@
     clapRoomImpulse = null,
     industrialClapBuffer = null,
     industrialClapBufferPromise = null;
+  let startVersion = 0;
   const paintTimers = new Set();
   const lookahead = 0.12,
     interval = 25;
+  function ensureAudio() {
+    if (ctx && ctx.state !== "closed") return ctx;
+    if (ctx && ctx.state === "closed") {
+      Object.keys(voiceGains).forEach((id) => delete voiceGains[id]);
+      masterLimiter = null;
+      cachedNoise = null;
+      clapRoomImpulse = null;
+      industrialClapBuffer = null;
+      industrialClapBufferPromise = null;
+    }
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw Error("Web Audio n’est pas disponible");
+    ctx = new AudioContextClass();
+    masterLimiter = ctx.createDynamicsCompressor();
+    masterLimiter.threshold.value = -1;
+    masterLimiter.knee.value = 0;
+    masterLimiter.ratio.value = 20;
+    masterLimiter.attack.value = 0.003;
+    masterLimiter.release.value = 0.12;
+    masterLimiter.connect(ctx.destination);
+    ctx.addEventListener("statechange", () => {
+      if (ctx && ctx.state !== "running" && (playing || starting)) {
+        stop();
+        status.textContent =
+          "Lecture arrêtée après une interruption audio · appuie sur Jouer pour reprendre.";
+      }
+    });
+    return ctx;
+  }
   function clapImpulseResponse() {
     if (clapRoomImpulse) return clapRoomImpulse;
     const duration = 0.38,
@@ -705,15 +738,18 @@
   async function start() {
     if (playing || starting) return;
     starting = true;
+    const token = ++startVersion;
     playButton.disabled = true;
     playButton.textContent = "…";
     try {
-      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-      await ctx.resume();
+      const audio = ensureAudio();
+      await audio.resume();
+      if (token !== startVersion) return;
       if (kit.value === "industrial" && !industrialClapBuffer) {
         status.textContent = "Chargement du clap…";
         await loadIndustrialClap();
       }
+      if (token !== startVersion) return;
       playing = true;
       step = 0;
       nextTime = ctx.currentTime + 0.05;
@@ -721,17 +757,23 @@
       playButton.textContent = "■ Arrêter";
       status.textContent = "En lecture";
     } catch (e) {
+      if (token !== startVersion) return;
       status.textContent =
         kit.value === "industrial" && !industrialClapBuffer
           ? "Clap industriel indisponible"
           : "Audio indisponible";
       playButton.textContent = "▶ Jouer";
     } finally {
-      starting = false;
-      playButton.disabled = false;
+      if (token === startVersion) {
+        starting = false;
+        playButton.disabled = false;
+      }
     }
   }
   function stop() {
+    startVersion++;
+    starting = false;
+    playButton.disabled = false;
     playing = false;
     clearInterval(timer);
     timer = null;
@@ -744,7 +786,14 @@
     status.textContent = "À l’arrêt";
   }
   playButton.addEventListener("click", () => (playing ? stop() : start()));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && (playing || starting)) {
+      stop();
+      status.textContent = "Lecture arrêtée quand l’onglet passe en arrière-plan.";
+    }
+  });
   document.querySelector("#clear").addEventListener("click", () => {
+    if (!window.confirm("Effacer les pas des huit pistes ?")) return;
     tracks.forEach((track, ti) => {
       track.steps.fill(0);
       cells[ti].forEach((cell, si) => {

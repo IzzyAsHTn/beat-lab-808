@@ -161,6 +161,8 @@
     setStatus("Chargement et décodage de « " + selected.name + " »…");
     let decodeContext;
     try {
+      await window.BeatLabCore.checkAudioFileDuration(selected);
+      if (token !== loadToken) return;
       const AudioContextClass =
         window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass)
@@ -172,12 +174,9 @@
       const decoded = await decodeContext.decodeAudioData(bytes);
       if (token !== loadToken) return;
       if (decoded.duration > 120) {
-        setStatus(
-          "Fichier décodé (" +
-            decoded.duration.toFixed(1) +
-            " s), mais trop long : le rendu est limité à 2 minutes. Découpe un extrait dans le Découpeur audio.",
+        throw new Error(
+          "Le fichier décodé dépasse la limite de 2 minutes. Découpe un extrait dans le Découpeur audio.",
         );
-        return;
       }
       inputBuffer = decoded;
       renderButton.disabled = false;
@@ -298,7 +297,7 @@
         nodes.push(convolver, reverbWet);
       }
       const limiter = context.createDynamicsCompressor();
-      limiter.threshold.value = -2;
+      limiter.threshold.value = -1;
       limiter.knee.value = 0;
       limiter.ratio.value = 20;
       limiter.attack.value = 0.003;

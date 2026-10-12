@@ -9,6 +9,10 @@ const root = path.resolve(
     path.join(path.dirname(fileURLToPath(import.meta.url)), ".."),
 );
 const core = createRequire(import.meta.url)(path.join(root, "lab-core.js"));
+const testCore = {
+  ...core,
+  checkAudioFileDuration: async () => 1,
+};
 const source = (name) => fs.readFileSync(path.join(root, name + ".js"), "utf8");
 const seq = source("sequencer"),
   cut = source("samples"),
@@ -61,7 +65,7 @@ function bind(scope, script) {
 }
 function trackFixture() {
   const scope = {
-    core,
+    core: testCore,
     track: {
       id: "track-0",
       name: "Kick",
@@ -73,7 +77,7 @@ function trackFixture() {
       fileName: "previous.wav",
     },
     status: { textContent: "" },
-    persist: {},
+    persist: { textContent: "" },
     writes: [],
     stop() {},
     applyFx() {},
@@ -155,11 +159,23 @@ await test("A slow earlier storage write cannot become the final saved sample", 
   await tick();
   const b = s.importSample(s.track, file("B"));
   await tick();
-  assert.equal(s.track.fileName, "B.wav");
+  assert.equal(s.track.fileName, "previous.wav");
   assert.deepEqual(s.writes, ["A.wav"]);
   saved.resolve();
   await Promise.all([a, b]);
+  assert.equal(s.track.fileName, "B.wav");
   assert.deepEqual(s.writes, ["A.wav", "B.wav"]);
+});
+await test("A failed sample write preserves the previous in-memory sample", async () => {
+  const s = trackFixture();
+  s.dbPut = async () => {
+    throw Error("quota");
+  };
+  await s.importSample(s.track, file("new"));
+  assert.equal(s.track.fileName, "previous.wav");
+  assert.equal(s.track.buffer.id, "previous");
+  assert.match(s.status.textContent, /précédent est conservé/);
+  assert.match(s.persist.textContent, /précédent est conservé/);
 });
 await test("Restoration cannot overwrite an import selected during startup", async () => {
   const s = trackFixture(),
@@ -178,6 +194,23 @@ await test("Restoration cannot overwrite an import selected during startup", asy
   a.resolve({ id: "stored" });
   assert.equal(await restore, false);
   assert.equal(s.track.fileName, "B.wav");
+});
+await test("A sample rejected by the duration limit remains removable", async () => {
+  const s = trackFixture();
+  s.core = {
+    ...testCore,
+    checkAudioFileDuration: async () => {
+      throw Error("Ce fichier dure 150 s. La limite est de 2 minutes.");
+    },
+  };
+  const restored = await s.restoreSample(
+    s.track,
+    { name: "long.wav", blob: file("long") },
+    s.track.load.version(),
+  );
+  assert.equal(restored, false);
+  assert.equal(s.track.hasStoredSample, true);
+  assert.match(s.track.fileName, /impossible à restaurer/);
 });
 await test("Removing a sample cancels a pending import and waits for earlier writes", async () => {
   const s = trackFixture(),
@@ -294,12 +327,13 @@ await test("Cutter imports commit only the latest decoded file", async () => {
     removeAttribute() {
       this.url = null;
     }
+    pause() {}
     load() {
       if (this.url) queueMicrotask(() => this.events.loadedmetadata());
     }
   }
   const s = {
-    window: { BeatLabCore: core },
+    window: { BeatLabCore: testCore },
     fileLoad: core.latestOperation(),
     Audio: AudioProbe,
     stop() {},
@@ -340,9 +374,38 @@ await test("Cutter imports commit only the latest decoded file", async () => {
   await s.loadFile(file("B", async () => bytes("B")));
   a.resolve(bytes("A"));
   await first;
-  assert.equal(s.filename.textContent, "B.wav");
+  assert.equal(s.filename.textContent, "B.wav", s.message.textContent);
   assert.equal(s.buffer.id, "B");
   assert.equal(s.fileUrl, "B.wav");
+});
+await test("A failed cutter import keeps the previously loaded file", async () => {
+  const testCore = {
+    ...core,
+    checkAudioFileDuration: async () => {
+      throw Error("durée trop longue");
+    },
+  };
+  let enabled;
+  const s = {
+    window: { BeatLabCore: testCore },
+    fileLoad: core.latestOperation(),
+    stop() {},
+    enable: (value) => (enabled = value),
+    message: {},
+    buffer: { id: "previous" },
+    fileUrl: "previous.wav",
+    startInput: {},
+    endInput: {},
+    filename: { textContent: "previous.wav" },
+    meta: { textContent: "old metadata" },
+    media: {},
+  };
+  bind(s, "async " + fn(cut, "loadFile"));
+  await s.loadFile(file("too-long"));
+  assert.equal(s.buffer.id, "previous");
+  assert.equal(s.fileUrl, "previous.wav");
+  assert.equal(enabled, true);
+  assert.match(s.message.textContent, /L’ancien fichier reste chargé/);
 });
 await test("Cutter metadata finishing late cannot replace the current file; its URL is released", async () => {
   const probes = [],
@@ -361,6 +424,7 @@ await test("Cutter metadata finishing late cannot replace the current file; its 
     removeAttribute() {
       this.url = null;
     }
+    pause() {}
     load() {
       if (this.url === "B.wav")
         queueMicrotask(() => this.events.loadedmetadata());
@@ -373,7 +437,7 @@ await test("Cutter metadata finishing late cannot replace the current file; its 
     },
   });
   const s = {
-    window: { BeatLabCore: core },
+    window: { BeatLabCore: testCore },
     fileLoad: core.latestOperation(),
     Audio: AudioProbe,
     stop() {},
