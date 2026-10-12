@@ -192,22 +192,30 @@
     message.textContent = "Chargement du fichier…";
     let pendingUrl = null;
     try {
+      await window.BeatLabCore.checkAudioFileDuration(file);
+      if (!fileLoad.current(token)) return;
       const bytes = await file.arrayBuffer();
       if (!fileLoad.current(token)) return;
       const decoded = await ensureAudio().decodeAudioData(bytes.slice(0));
       if (!fileLoad.current(token)) return;
+      if (decoded.duration > 120)
+        throw new Error("La durée décodée dépasse la limite de 2 minutes.");
       pendingUrl = URL.createObjectURL(file);
       // Separate metadata loading keeps an older file from changing the active player.
       const probe = new Audio();
       probe.preload = "metadata";
-      await new Promise((resolve, reject) => {
-        probe.addEventListener("loadedmetadata", resolve, { once: true });
-        probe.addEventListener("error", reject, { once: true });
-        probe.src = pendingUrl;
+      try {
+        await new Promise((resolve, reject) => {
+          probe.addEventListener("loadedmetadata", resolve, { once: true });
+          probe.addEventListener("error", reject, { once: true });
+          probe.src = pendingUrl;
+          probe.load();
+        });
+      } finally {
+        probe.pause();
+        probe.removeAttribute("src");
         probe.load();
-      });
-      probe.removeAttribute("src");
-      probe.load();
+      }
       if (!fileLoad.current(token)) return;
       if (fileUrl) URL.revokeObjectURL(fileUrl);
       fileUrl = pendingUrl;
@@ -228,20 +236,10 @@
         "Prêt. Fais glisser sur la forme d’onde pour choisir ton extrait.";
     } catch (error) {
       if (!fileLoad.current(token)) return;
-      buffer = null;
-      waveBase = waveAccent = null;
-      if (fileUrl) {
-        URL.revokeObjectURL(fileUrl);
-        fileUrl = null;
-      }
-      media.removeAttribute("src");
-      media.load();
-      enable(false);
-      filename.textContent = file.name;
-      meta.textContent = "—";
+      enable(Boolean(buffer));
       message.textContent =
-        "Ce format ne se décode pas ici. Essaie un WAV ou MP3.";
-      draw();
+        (error.message || "Ce format ne se décode pas ici. Essaie un WAV ou MP3.") +
+        (buffer ? " L’ancien fichier reste chargé." : "");
     } finally {
       if (pendingUrl) URL.revokeObjectURL(pendingUrl);
     }

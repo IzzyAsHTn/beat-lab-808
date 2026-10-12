@@ -9,6 +9,37 @@ const root = path.resolve(
     path.join(path.dirname(fileURLToPath(import.meta.url)), ".."),
 );
 const core = createRequire(import.meta.url)(path.join(root, "lab-core.js"));
+await (async () => {
+  class AudioProbe {
+    constructor() {
+      this.duration = 121;
+    }
+    load() {
+      if (this.onloadedmetadata)
+        queueMicrotask(() => this.onloadedmetadata?.());
+    }
+    pause() {}
+    removeAttribute() {}
+  }
+  const revoked = [];
+  const window = {
+    Audio: AudioProbe,
+    URL: {
+      createObjectURL: () => "blob:test",
+      revokeObjectURL: (url) => revoked.push(url),
+    },
+    setTimeout,
+    clearTimeout,
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(root, "lab-core.js"), "utf8"), {
+    window,
+  });
+  await assert.rejects(
+    window.BeatLabCore.checkAudioFileDuration({}),
+    /limite est de 2 minutes/,
+  );
+  assert.deepEqual(revoked, ["blob:test"]);
+})();
 function program(name) {
   const external = path.join(root, name + ".js");
   if (fs.existsSync(external)) return fs.readFileSync(external, "utf8");
@@ -42,6 +73,25 @@ function fn(source, name) {
 }
 const drums = program("index"),
   cutter = program("samples");
+const sequencerSource = program("sequencer"),
+  fxStart = sequencerSource.indexOf("const FX_RANGES ="),
+  fxEnd = sequencerSource.indexOf("const tracks = defs.map", fxStart),
+  restoreFx = fn(sequencerSource, "restoreFx"),
+  restoredFx = vm.runInNewContext(
+    sequencerSource.slice(fxStart, fxEnd) +
+      restoreFx +
+      "; restoreFx(target, saved); JSON.stringify(target);",
+    {
+      target: { filter: 18000, drive: 0, delay: 0, reverb: 0 },
+      saved: { filter: 999999, drive: -80, delay: 1200, reverb: 35 },
+    },
+  );
+assert.deepEqual(JSON.parse(restoredFx), {
+  filter: 18000,
+  drive: 0,
+  delay: 100,
+  reverb: 35,
+});
 const timing = [];
 for (const bpm of [60, 96, 100, 160])
   for (const swing of [false, true]) {
@@ -95,6 +145,7 @@ const scope = {
   clearInterval() {},
   playing: true,
   timer: 1,
+  startVersion: 0,
   playButton: { textContent: "" },
   status: { textContent: "" },
 };

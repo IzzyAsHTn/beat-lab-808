@@ -33,6 +33,62 @@
     }
   }
 
+  async function checkAudioFileDuration(file, maxSeconds = 120) {
+    const AudioElement = root.Audio;
+    if (!AudioElement || !root.URL || !root.URL.createObjectURL)
+      throw new Error("Impossible de vérifier la durée de ce fichier audio.");
+    const url = root.URL.createObjectURL(file);
+    let probe;
+    try {
+      probe = new AudioElement();
+      probe.preload = "metadata";
+      const duration = await new Promise((resolve, reject) => {
+        const timeout = root.setTimeout(
+          () => reject(new Error("La lecture des métadonnées a expiré.")),
+          15000,
+        );
+        const finish = (callback, value) => {
+          root.clearTimeout(timeout);
+          probe.onloadedmetadata = null;
+          probe.onerror = null;
+          callback(value);
+        };
+        probe.onloadedmetadata = () => {
+          const seconds = Number(probe.duration);
+          if (!Number.isFinite(seconds) || seconds < 0)
+            finish(
+              reject,
+              new Error("La durée de ce fichier audio est illisible."),
+            );
+          else finish(resolve, seconds);
+        };
+        probe.onerror = () =>
+          finish(
+            reject,
+            new Error("Impossible de lire la durée de ce fichier audio."),
+          );
+        try {
+          probe.src = url;
+          probe.load();
+        } catch (error) {
+          finish(reject, error);
+        }
+      });
+      if (duration > maxSeconds)
+        throw new Error(
+          `Ce fichier dure ${duration.toFixed(1)} s. La limite est de ${Math.round(maxSeconds / 60)} minutes.`,
+        );
+      return duration;
+    } finally {
+      if (probe) {
+        probe.pause();
+        probe.removeAttribute("src");
+        probe.load();
+      }
+      root.URL.revokeObjectURL(url);
+    }
+  }
+
   function gameResult(completed, mode) {
     const unit = mode === "notes" ? "note" : "son";
     return (
@@ -54,6 +110,7 @@
     serialQueue,
     stepDuration,
     checkAudioFile,
+    checkAudioFileDuration,
     gameResult,
   });
   if (typeof module !== "undefined" && module.exports) module.exports = api;

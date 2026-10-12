@@ -17,6 +17,21 @@
     ["Guitare / Texture 1", "#86d6a1"],
     ["Guitare / Texture 2", "#e5d87a"],
   ];
+  const FX_RANGES = Object.freeze({
+    filter: [500, 18000],
+    drive: [0, 100],
+    delay: [0, 100],
+    reverb: [0, 100],
+  });
+  const clampFx = (key, value) =>
+    Math.max(FX_RANGES[key][0], Math.min(FX_RANGES[key][1], value));
+  function restoreFx(target, saved) {
+    if (!saved) return;
+    for (const key of Object.keys(FX_RANGES)) {
+      const value = Number(saved[key]);
+      if (Number.isFinite(value)) target[key] = clampFx(key, value);
+    }
+  }
   const tracks = defs.map((d, i) => ({
     id: "track-" + i,
     name: d[0],
@@ -24,6 +39,7 @@
     steps: Array(STEP_COUNT).fill(false),
     buffer: null,
     fileName: "",
+    hasStoredSample: false,
     mix: { volume: 100, pan: 0 },
     mute: false,
     solo: false,
@@ -155,10 +171,22 @@
     return b;
   }
   function ensureAudio() {
-    if (ctx) return ctx;
+    if (ctx && ctx.state !== "closed") return ctx;
+    if (ctx && ctx.state === "closed") {
+      ctx = null;
+      master = null;
+      tracks.forEach((track) => (track.nodes = null));
+    }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) throw Error("Web Audio n’est pas disponible dans ce navigateur");
     ctx = new AC();
+    ctx.addEventListener("statechange", () => {
+      if ((playing || starting) && ctx && ctx.state !== "running") {
+        stop();
+        status.textContent =
+          "Lecture arrêtée après une interruption audio · appuie sur Jouer pour reprendre.";
+      }
+    });
     master = ctx.createGain();
     master.gain.value = 0.78;
     master.connect(ctx.destination);
@@ -327,6 +355,9 @@
           })),
         }),
       );
+      if (persist.textContent.startsWith("Impossible de sauvegarder"))
+        persist.textContent =
+          "Samples et réglages conservés automatiquement sur cet appareil.";
     } catch (_) {
       persist.textContent =
         "Impossible de sauvegarder les réglages : le stockage local du navigateur est plein ou désactivé.";
@@ -344,7 +375,8 @@
       name.title = track.fileName || "aucun sample";
     }
     const remove = label.querySelector(".remove-sample");
-    if (remove) remove.disabled = track.removing || !track.buffer;
+    if (remove)
+      remove.disabled = track.removing || !(track.buffer || track.hasStoredSample);
   }
 
   async function importSample(track, file) {
@@ -358,17 +390,24 @@
     const token = track.load.begin();
     stop();
     status.textContent = "Chargement de " + file.name + "…";
-    let decoded = null;
+    let decoded;
     try {
+      await core.checkAudioFileDuration(file);
+      if (!track.load.current(token)) return;
       const ac = ensureAudio(),
         bytes = await file.arrayBuffer();
       if (!track.load.current(token)) return;
       decoded = await ac.decodeAudioData(bytes);
       if (!track.load.current(token)) return;
-      track.buffer = decoded;
-      track.fileName = file.name;
-      applyFx(track);
-      updateLabel(track, track._label);
+      if (decoded.duration > 120)
+        throw new Error("La durée décodée dépasse la limite de 2 minutes.");
+    } catch (error) {
+      if (track.load.current(token))
+        status.textContent =
+          error.message || "Sample illisible ; le sample précédent est conservé.";
+      return;
+    }
+    try {
       await track.write(() => {
         if (track.load.current(token))
           return dbPut(track.id, {
@@ -377,21 +416,23 @@
             type: file.type || "audio/wav",
           });
       });
-      if (!track.load.current(token)) return;
-      status.textContent = "Sample chargé et sauvegardé";
-      persist.textContent =
-        "Samples et réglages conservés automatiquement sur cet appareil.";
     } catch (error) {
       if (!track.load.current(token)) return;
-      if (decoded) {
-        status.textContent =
-          "Sample prêt pour cette session, mais impossible à sauvegarder.";
-        persist.textContent =
-          "Le navigateur n’a pas pu enregistrer le sample. Il faudra le recharger après navigation.";
-      } else
-        status.textContent =
-          "Sample illisible ; le sample précédent est conservé.";
+      status.textContent =
+        "Enregistrement impossible ; le sample précédent est conservé.";
+      persist.textContent =
+        "Le navigateur n’a pas pu enregistrer ce sample. Le précédent est conservé.";
+      return;
     }
+    if (!track.load.current(token)) return;
+    track.buffer = decoded;
+    track.fileName = file.name;
+    track.hasStoredSample = true;
+    applyFx(track);
+    updateLabel(track, track._label);
+    status.textContent = "Sample chargé et sauvegardé";
+    persist.textContent =
+      "Samples et réglages conservés automatiquement sur cet appareil.";
   }
   async function removeSample(track) {
     if (track.removing) return;
@@ -404,6 +445,7 @@
       await track.write(() => dbDelete(track.id));
       track.buffer = null;
       track.fileName = "";
+      track.hasStoredSample = false;
       track._input.value = "";
       status.textContent = "Sample retiré de " + track.name;
       saveState();
@@ -418,14 +460,19 @@
     }
   }
   async function restoreSample(track, entry, token) {
-    if (!entry || !entry.blob || !track.load.current(token)) return false;
+    if (!entry || !track.load.current(token)) return false;
+    track.hasStoredSample = true;
     try {
+      if (!entry.blob) throw Error("Le fichier sauvegardé est incomplet.");
       core.checkAudioFile(entry.blob);
+      await core.checkAudioFileDuration(entry.blob);
+      if (!track.load.current(token)) return false;
       const ac = ensureAudio(),
         bytes = await entry.blob.arrayBuffer();
       if (!track.load.current(token)) return false;
       const decoded = await ac.decodeAudioData(bytes);
       if (!track.load.current(token)) return false;
+      if (decoded.duration > 120) throw new Error("Sample trop long");
       track.buffer = decoded;
       track.fileName = entry.name || "sample sauvegardé";
       updateLabel(track, track._label);
@@ -470,7 +517,7 @@
     range.style.setProperty("--fx-progress", progress + "%");
   }
   function setFxValue(track, key, value, output) {
-    track.fx[key] = Number(value);
+    track.fx[key] = clampFx(key, Number(value));
     output.textContent =
       key === "filter"
         ? Number(value) >= 1000
@@ -755,7 +802,13 @@
       const file = input.files && input.files[0];
       if (file) void importSample(track, file);
     });
-    remove.addEventListener("click", () => void removeSample(track));
+    remove.addEventListener("click", () => {
+      if (
+        (track.buffer || track.hasStoredSample) &&
+        window.confirm(`Retirer le sample « ${track.fileName || track.name} » ?`)
+      )
+        void removeSample(track);
+    });
     track._label = label;
     track._input = input;
   });
@@ -849,7 +902,14 @@
       status.textContent = "À l’arrêt";
   }
   play.addEventListener("click", () => (playing ? stop() : start()));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && (playing || starting)) {
+      stop();
+      status.textContent = "Lecture arrêtée quand l’onglet passe en arrière-plan.";
+    }
+  });
   $("#clear").addEventListener("click", () => {
+    if (!window.confirm("Effacer les pas des huit pistes ?")) return;
     tracks.forEach((t) => t.steps.fill(false));
     drawSteps();
     saveState();
@@ -902,10 +962,7 @@
               Math.min(100, Number(item.mix.pan)),
             );
         }
-        if (item.fx)
-          for (const k of ["filter", "drive", "delay", "reverb"])
-            if (Number.isFinite(Number(item.fx[k])))
-              tracks[i].fx[k] = Number(item.fx[k]);
+        restoreFx(tracks[i].fx, item.fx);
       });
     drawSteps();
     tracks.forEach((t) => {
