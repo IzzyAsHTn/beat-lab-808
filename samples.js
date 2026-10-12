@@ -159,6 +159,27 @@
     endInput.value = hi.toFixed(3);
     draw();
   }
+  function adjustSelectionBoundary(boundary, delta) {
+    if (!buffer) return;
+    const min = 0.005;
+    if (boundary === "start")
+      setSelection(
+        Math.max(0, Math.min(selectionEnd - min, selectionStart + delta)),
+        selectionEnd,
+      );
+    else
+      setSelection(
+        selectionStart,
+        Math.min(duration(), Math.max(selectionStart + min, selectionEnd + delta)),
+      );
+    position.textContent =
+      "Début " + timeText(selectionStart) + " · fin " + timeText(selectionEnd);
+    message.textContent =
+      "Sélection clavier · début " +
+      timeText(selectionStart) +
+      " · fin " +
+      timeText(selectionEnd);
+  }
   function enable(on) {
     [
       startInput,
@@ -192,14 +213,14 @@
     message.textContent = "Chargement du fichier…";
     let pendingUrl = null;
     try {
-      await window.BeatLabCore.checkAudioFileDuration(file);
+      await window.BeatLabCore.checkAudioFileDuration(file, 300);
       if (!fileLoad.current(token)) return;
       const bytes = await file.arrayBuffer();
       if (!fileLoad.current(token)) return;
       const decoded = await ensureAudio().decodeAudioData(bytes.slice(0));
       if (!fileLoad.current(token)) return;
-      if (decoded.duration > 120)
-        throw new Error("La durée décodée dépasse la limite de 2 minutes.");
+      if (decoded.duration > 300)
+        throw new Error("La durée décodée dépasse la limite de 5 minutes.");
       pendingUrl = URL.createObjectURL(file);
       // Separate metadata loading keeps an older file from changing the active player.
       const probe = new Audio();
@@ -327,6 +348,9 @@
         "Test audio bloqué. Ouvre le fichier dans Safari ou Chrome puis réessaie.";
     }
   }
+  function normalizationGainForPeak(peak) {
+    return peak > 0 ? 0.89125094 / peak : 1;
+  }
   function exportWav() {
     if (!buffer) return;
     const from = Math.floor(selectionStart * buffer.sampleRate),
@@ -365,9 +389,14 @@
     const data = Array.from({ length: channels }, (_, ch) =>
       buffer.getChannelData(ch),
     );
+    let peak = 0;
+    for (let i = 0; i < frames; i++)
+      for (let ch = 0; ch < channels; ch++)
+        peak = Math.max(peak, Math.abs(data[ch][from + i] || 0));
+    const normalizationGain = normalizationGainForPeak(peak);
     for (let i = 0; i < frames; i++)
       for (let ch = 0; ch < channels; ch++) {
-        const s = Math.max(-1, Math.min(1, data[ch][from + i] || 0));
+        const s = Math.max(-1, Math.min(1, (data[ch][from + i] || 0) * normalizationGain));
         v.setInt16(p, s < 0 ? s * 32768 : s * 32767, true);
         p += 2;
       }
@@ -382,8 +411,20 @@
     a.download = `${base}-${selectionStart.toFixed(2)}s-${selectionEnd.toFixed(2)}s.wav`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    message.textContent = "WAV exporté. Tu peux l’importer dans Logic Pro.";
+    message.textContent = "WAV exporté, crête normalisée à −1 dBFS. Tu peux l’importer dans Logic Pro.";
   }
+  canvas.addEventListener("keydown", (event) => {
+    const direction =
+      event.key === "ArrowLeft" || event.key === "PageDown"
+        ? -1
+        : event.key === "ArrowRight" || event.key === "PageUp"
+          ? 1
+          : 0;
+    if (!direction || !buffer) return;
+    event.preventDefault();
+    const step = event.key.startsWith("Page") ? 1 : event.altKey ? 0.1 : 0.01;
+    adjustSelectionBoundary(event.shiftKey ? "start" : "end", direction * step);
+  });
   canvas.addEventListener("pointerdown", (e) => {
     if (!buffer) return;
     canvas.setPointerCapture(e.pointerId);

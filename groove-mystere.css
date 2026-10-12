@@ -355,6 +355,18 @@ button:disabled {
     scroll-behavior: auto !important;
   }
 }
+.pad-shortcuts {
+  margin: 10px 0 0;
+  color: var(--muted, #bcbcaf);
+  text-align: center;
+  font-size: 13px;
+}
+.pad-shortcuts kbd {
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font: inherit;
+}
 
 .game-actions {
   display: flex;

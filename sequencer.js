@@ -64,6 +64,7 @@
   let dbPromise = null,
     ctx = null,
     master = null,
+    masterLimiter = null,
     playing = false,
     step = 0,
     nextTime = 0,
@@ -170,11 +171,22 @@
     }
     return b;
   }
+  function connectMasterLimiter(audioContext, input) {
+    const limiter = audioContext.createDynamicsCompressor();
+    limiter.threshold.value = -1;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.12;
+    input.connect(limiter).connect(audioContext.destination);
+    return limiter;
+  }
   function ensureAudio() {
     if (ctx && ctx.state !== "closed") return ctx;
     if (ctx && ctx.state === "closed") {
       ctx = null;
       master = null;
+      masterLimiter = null;
       tracks.forEach((track) => (track.nodes = null));
     }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -189,7 +201,7 @@
     });
     master = ctx.createGain();
     master.gain.value = 0.78;
-    master.connect(ctx.destination);
+    masterLimiter = connectMasterLimiter(ctx, master);
     const impulse = makeImpulse(ctx),
       hasSolo = tracks.some((t) => t.solo);
     tracks.forEach((track) => {

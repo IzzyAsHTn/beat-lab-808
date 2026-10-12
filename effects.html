@@ -92,7 +92,7 @@
               type="range"
               min="500"
               max="18000"
-              value="18000"><output id="cutv">18 kHz</output>
+              value="18000"><output id="cutv" for="cut">18 kHz</output>
           </div>
           <div class="effectrow">
             <label for="drive">Saturation</label
@@ -101,12 +101,13 @@
               type="range"
               min="0"
               max="100"
-              value="0"><output id="drivev">0%</output>
+              value="0"><output id="drivev" for="drive">0%</output>
           </div>
           <div class="effectrow">
             <label for="delay">Écho</label
             ><input id="delay" type="range" min="0" max="70" value="0"><output
               id="delayv"
+              for="delay"
               >0%</output
             >
           </div>
@@ -117,13 +118,15 @@
               type="range"
               min="0"
               max="70"
-              value="0"><output id="reverbv">0%</output>
+              value="0"><output id="reverbv" for="reverb">0%</output>
           </div>
           <div class="row render-controls">
             <button type="button" id="preview" class="btn" disabled>
               ▶ Préécouter en boucle</button
             ><button type="button" id="render" class="btn primary" disabled>
               Créer le rendu et préparer l’écoute</button
+            ><button type="button" id="cancel-render" class="btn" hidden>
+              Annuler le rendu</button
             ><button type="button" id="play" class="btn" disabled>
               ▶ Écouter le rendu</button
             ><button type="button" id="download" class="btn" disabled>
@@ -164,6 +167,6 @@
       </footer>
     </div>
     <script src="lab-core.js?v=9a82659e4759"></script>
-    <script src="effects.js?v=e2d66640c317"></script>
+    <script src="effects.js?v=0776e9c1ddd5"></script>
   </body>
 </html>

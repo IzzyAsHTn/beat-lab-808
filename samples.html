@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="theme-color" content="#11110f">
     <title>Découpeur audio — Beat Lab 808</title>
-    <link rel="stylesheet" href="samples.css?v=b9e88c6b02da">
+    <link rel="stylesheet" href="samples.css?v=6769c974b3a7">
     <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
     <meta
       name="description"
@@ -80,7 +80,7 @@
             ><input id="file" type="file" accept="audio/*"><span
               ><strong>Choisir un fichier audio</strong><br>ou glisser-déposer
               un sample ici<br><small
-                >50 Mo · 2 minutes maximum · Le fichier reste sur ton appareil.</small
+                >50 Mo · 5 minutes maximum · Le fichier reste sur ton appareil.</small
               ></span
             ></label
           >
@@ -91,14 +91,18 @@
           <div class="wavebox">
             <canvas
               id="wave"
-              role="img"
-              aria-label="Forme d’onde du fichier audio. Pour sélectionner au clavier, utilise les champs Début et Fin ci-dessous."
+              role="group"
+              tabindex="0"
+              aria-label="Sélection de la forme d’onde"
+              aria-describedby="wave-instructions"
             ></canvas>
           </div>
           <div class="wavehelp">
             <span
-              >Glisse sur la forme d’onde ou règle les champs Début et Fin
-              ci-dessous.</span
+              id="wave-instructions"
+              >Glisse sur la forme d’onde. Au clavier : flèches pour déplacer la
+              fin, Majuscule + flèches pour déplacer le début, Alt + flèches pour
+              un pas de 0,1 s ; Page précédente/suivante déplacent d’une seconde.</span
             ><button type="button" class="btn" id="reset" disabled>
               Tout sélectionner
             </button>
@@ -178,6 +182,6 @@
       </footer>
     </div>
     <script src="lab-core.js?v=9a82659e4759"></script>
-    <script src="samples.js?v=2fab24bbe84f"></script>
+    <script src="samples.js?v=9b49ad3e649f"></script>
   </body>
 </html>

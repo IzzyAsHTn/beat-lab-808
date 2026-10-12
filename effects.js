@@ -3,6 +3,7 @@
   const file = $("#file"),
     previewButton = $("#preview"),
     renderButton = $("#render"),
+    cancelRenderButton = $("#cancel-render"),
     playButton = $("#play"),
     downloadButton = $("#download"),
     status = $("#status"),
@@ -15,13 +16,15 @@
     loadToken = 0,
     renderToken = 0,
     preview = null,
-    previewToken = 0;
+    previewToken = 0,
+    activeRender = null;
   const defaultRenderText = "Créer le rendu et préparer l’écoute";
   const setStatus = (message) => {
     status.textContent = message;
   };
   function clearRender(message = "") {
     ++renderToken;
+    if (activeRender) activeRender.cancelled = true;
     player.pause();
     player.removeAttribute("src");
     player.load();
@@ -97,7 +100,57 @@
     controls.forEach((control) => (control.disabled = busy));
     renderButton.disabled = busy || !inputBuffer;
     renderButton.textContent = busy ? "Rendu en cours…" : defaultRenderText;
+    cancelRenderButton.hidden =
+      !busy || !activeRender || !activeRender.cancellable;
+    cancelRenderButton.disabled = !busy || !activeRender?.cancellable;
     setPreviewBusy(busy);
+  }
+  async function renderOfflineCancellable(context, operation, onCapability) {
+    const duration = context.length / context.sampleRate;
+    if (duration <= 0.5) {
+      onCapability(false, "too-short");
+      return { buffer: await context.startRendering(), cancelled: false };
+    }
+    if (
+      typeof context.suspend !== "function" ||
+      typeof context.resume !== "function"
+    ) {
+      onCapability(false, "unsupported");
+      return { buffer: await context.startRendering(), cancelled: false };
+    }
+    const interval = 0.5;
+    let nextTime = interval;
+    let checkpoint;
+    try {
+      checkpoint = context.suspend(nextTime);
+    } catch (error) {
+      onCapability(false, "unsupported");
+      return { buffer: await context.startRendering(), cancelled: false };
+    }
+    onCapability(true);
+    const rendering = context.startRendering();
+    while (true) {
+      try {
+        await checkpoint;
+      } catch (error) {
+        onCapability(false, "unsupported");
+        return { buffer: await rendering, cancelled: false };
+      }
+      if (operation.cancelled) return { buffer: null, cancelled: true };
+      if (nextTime + interval >= duration) {
+        await context.resume();
+        return { buffer: await rendering, cancelled: false };
+      }
+      nextTime += interval;
+      try {
+        checkpoint = context.suspend(nextTime);
+      } catch (error) {
+        await context.resume();
+        onCapability(false, "unsupported");
+        return { buffer: await rendering, cancelled: false };
+      }
+      await context.resume();
+    }
   }
   function formatError(action, error) {
     console.error("[Beat Lab Effets] " + action, error);
@@ -427,6 +480,8 @@
     const token = ++renderToken;
     clearRender();
     renderToken = token;
+    const operation = { cancelled: false, cancellable: false };
+    activeRender = operation;
     setBusy(true);
     setStatus("Application des effets et création du rendu…");
     try {
@@ -483,8 +538,26 @@
       }
       output.connect(context.destination);
       source.start(0);
-      const result = await context.startRendering();
-      if (token !== renderToken) return;
+      const rendered = await renderOfflineCancellable(
+        context,
+        operation,
+        (cancellable, reason) => {
+          operation.cancellable = cancellable;
+          cancelRenderButton.hidden = !cancellable;
+          cancelRenderButton.disabled = !cancellable;
+          if (cancellable)
+            setStatus("Rendu en cours · tu peux l’annuler à tout moment.");
+          else if (reason === "too-short")
+            setStatus("Rendu très court · annulation non proposée.");
+          else
+            setStatus("Rendu en cours · l’annulation n’est pas prise en charge par ce navigateur.");
+        },
+      );
+      if (rendered.cancelled || token !== renderToken) {
+        if (token === renderToken) setStatus("Rendu annulé.");
+        return;
+      }
+      const result = rendered.buffer;
       const peak = applyOutputCeiling(result);
       renderedBuffer = result;
       renderUrl = URL.createObjectURL(encodeWav(result));
@@ -509,8 +582,17 @@
       if (token === renderToken)
         setStatus(formatError("Échec du rendu audio", error));
     } finally {
-      if (token === renderToken) setBusy(false);
+      if (activeRender === operation) {
+        activeRender = null;
+        setBusy(false);
+      }
     }
+  });
+  cancelRenderButton.addEventListener("click", () => {
+    if (!activeRender || !activeRender.cancellable) return;
+    activeRender.cancelled = true;
+    cancelRenderButton.disabled = true;
+    setStatus("Annulation au prochain point de rendu…");
   });
   playButton.addEventListener("click", async () => {
     if (!renderUrl) return;

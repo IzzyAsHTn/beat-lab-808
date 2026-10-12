@@ -64,8 +64,15 @@ function bind(scope, script) {
   return scope;
 }
 function trackFixture() {
+  const durationChecks = [];
   const scope = {
-    core: testCore,
+    core: {
+      ...testCore,
+      checkAudioFileDuration: async (blob, maxSeconds) => {
+        durationChecks.push(maxSeconds);
+        return 1;
+      },
+    },
     track: {
       id: "track-0",
       name: "Kick",
@@ -89,12 +96,14 @@ function trackFixture() {
   };
   scope.dbPut = async (id, entry) => scope.writes.push(entry.name);
   scope.dbDelete = async () => scope.writes.push("delete");
-  return bind(
+  const fixture = bind(
     scope,
     ["importSample", "removeSample", "restoreSample"]
       .map((n) => "async " + fn(seq, n))
       .join("\n"),
   );
+  fixture.durationChecks = durationChecks;
+  return fixture;
 }
 const file = (id, arrayBuffer = async () => ({ id })) => ({
   name: id + ".wav",
@@ -132,6 +141,7 @@ await test("The last import wins when file reading finishes out of order", async
   await pending;
   assert.equal(s.track.fileName, "B.wav");
   assert.deepEqual(s.writes, ["B.wav"]);
+  assert.deepEqual(s.durationChecks, [undefined, undefined]);
 });
 await test("The last import wins when decoding finishes out of order", async () => {
   const s = trackFixture(),
@@ -236,6 +246,170 @@ await test("Failed removal retains the sample and unlocks its input", async () =
   assert.equal(s.track._input.disabled, false);
   assert.match(s.status.textContent, /non supprimé/);
 });
+await test("Sequencer master output is connected through the compressor", async () => {
+  let connectedTo = null,
+    destination = null;
+  const input = { connect(node) { connectedTo = node; return node; } };
+  const limiter = {
+    threshold: {}, knee: {}, ratio: {}, attack: {}, release: {},
+    connect(node) { destination = node; return this; },
+  };
+  const context = {
+    destination: {},
+    createDynamicsCompressor: () => limiter,
+  };
+  const helper = fn(seq, "connectMasterLimiter");
+  const result = vm.runInNewContext(
+    helper + ";connectMasterLimiter(context,input);",
+    { context, input },
+  );
+  assert.equal(result, limiter);
+  assert.equal(connectedTo, limiter);
+  assert.equal(destination, context.destination);
+  assert.equal(limiter.threshold.value, -1);
+  assert.equal(limiter.ratio.value, 20);
+});
+await test("Industrial clap uses the synthesized voice when its sample is absent", async () => {
+  const hits = [];
+  const scope = {
+    tracks: [{ id: "clap", steps: [true] }],
+    audible: () => true,
+    kit: { value: "industrial" },
+    industrialClapBuffer: null,
+    industrialClap: () => hits.push("sample"),
+    classic808Clap: () => hits.push("fallback"),
+    noiseHit() {},
+    ctx: { currentTime: 0 },
+    setTimeout: () => 1,
+    paintTimers: new Set(),
+    cells: [[]],
+    playing: false,
+  };
+  vm.runInNewContext(fn(source("index"), "schedule") + ";schedule(0,0.1);", scope);
+  assert.deepEqual(hits, ["fallback"]);
+});
+await test("Groove scores restore valid values and default safely on corrupt storage", async () => {
+  const grooveSource = source("groove-mystere");
+  const read = fn(grooveSource, "readScores");
+  const restored = vm.runInNewContext(
+    'const SCORE_KEY="scores";' + read +
+      ';JSON.stringify(readScores());',
+    {
+      localStorage: {
+        getItem: () => JSON.stringify({ bestByMode: { drums: 8.9, notes: -2 } }),
+      },
+    },
+  );
+  assert.deepEqual(JSON.parse(restored), {
+    bestByMode: { drums: 8, notes: 0 },
+    bestPatternsByMode: { drums: 0, notes: 0 },
+  });
+  const corrupt = vm.runInNewContext(
+    'const SCORE_KEY="scores";' + read + ';JSON.stringify(readScores());',
+    { localStorage: { getItem: () => "{" } },
+  );
+  assert.deepEqual(JSON.parse(corrupt).bestByMode, { drums: 0, notes: 0 });
+  let persisted = "";
+  const save = fn(grooveSource, "saveScores");
+  vm.runInNewContext(
+    'const SCORE_KEY="scores";' + save + ";saveScores();",
+    {
+      bestByMode: { drums: 3, notes: 1 },
+      bestPatternsByMode: { drums: 2, notes: 0 },
+      localStorage: { setItem: (key, value) => (persisted = key + ":" + value) },
+      updateStatus() {},
+    },
+  );
+  assert.match(persisted, /^scores:/);
+  assert.equal(JSON.parse(persisted.slice(persisted.indexOf(":") + 1)).bestByMode.drums, 3);
+});
+await test("Groove number keys activate pads without taking over text fields", async () => {
+  const src = source("groove-mystere");
+  const at = src.lastIndexOf('document.addEventListener("keydown", (event) => {');
+  const handler = block(src, src.indexOf("{", at));
+  const pressed = [];
+  class ElementProbe {
+    constructor(editable = false) { this.editable = editable; }
+    closest() { return this.editable ? {} : null; }
+  }
+  const scope = {
+    Element: ElementProbe,
+    pads: Array.from({ length: 4 }, (_, id) => ({
+      disabled: false,
+      click() { pressed.push(id); },
+    })),
+  };
+  const keydown = vm.runInNewContext("event=>{" + handler + "}", scope);
+  let prevented = false;
+  keydown({ key: "3", target: {}, preventDefault() { prevented = true; } });
+  assert.deepEqual(pressed, [2]);
+  assert.equal(prevented, true);
+  keydown({ key: "1", target: new ElementProbe(true), preventDefault() {} });
+  assert.deepEqual(pressed, [2]);
+  scope.pads[1].disabled = true;
+  keydown({ key: "2", target: {}, preventDefault() {} });
+  assert.deepEqual(pressed, [2]);
+});
+await test("Keyboard waveform boundary edits preserve the minimum selection", async () => {
+  const scope = {
+    buffer: {},
+    selectionStart: 0.5,
+    selectionEnd: 1,
+    duration: () => 2,
+    setSelection: null,
+    timeText: (value) => value.toFixed(3),
+    position: { textContent: "" },
+    message: { textContent: "" },
+  };
+  scope.setSelection = (a, b) => {
+    scope.selectionStart = Math.min(a, b);
+    scope.selectionEnd = Math.max(a, b);
+  };
+  vm.runInNewContext(fn(cut, "adjustSelectionBoundary") + ";adjustSelectionBoundary('end',-4);", scope);
+  assert.ok(scope.selectionEnd - scope.selectionStart >= 0.005);
+  vm.runInNewContext("adjustSelectionBoundary('start',-2);", scope);
+  assert.equal(scope.selectionStart, 0);
+  assert.match(scope.message.textContent, /Sélection clavier/);
+});
+await test("Effects rendering can stop at a scheduled offline checkpoint", async () => {
+  const checkpoint = deferred();
+  const render = deferred();
+  const context = {
+    length: 48000 * 3,
+    sampleRate: 48000,
+    suspend() { return checkpoint.promise; },
+    resume() { throw Error("A cancelled render must remain suspended"); },
+    startRendering() { return render.promise; },
+  };
+  const operation = { cancelled: false };
+  let capability = false;
+  const task = vm.runInNewContext(
+    block(source("effects"), source("effects").indexOf("async function renderOfflineCancellable")) +
+      ";renderOfflineCancellable(context,operation,value=>capability=value);",
+    { context, operation, capability },
+  );
+  await tick();
+  assert.equal(context.length / context.sampleRate, 3);
+  operation.cancelled = true;
+  checkpoint.resolve();
+  const outcome = await task;
+  assert.equal(outcome.cancelled, true);
+});
+await test("Effects render reports when its browser cannot cancel offline work", async () => {
+  const context = {
+    length: 48000,
+    sampleRate: 48000,
+    startRendering: async () => ({ id: "rendered" }),
+  };
+  const capabilities = [];
+  const result = await vm.runInNewContext(
+    block(source("effects"), source("effects").indexOf("async function renderOfflineCancellable")) +
+      ";renderOfflineCancellable(context,operation,(value,reason)=>capabilities.push([value,reason]));",
+    { context, operation: { cancelled: false }, capabilities },
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(capabilities)), [[false, "unsupported"]]);
+  assert.equal(result.buffer.id, "rendered");
+});
 await test("Oversized files are refused before reading or decoding", async () => {
   core.checkAudioFile({ size: 50_000_000 });
   assert.throws(() => core.checkAudioFile({ size: 50_000_001 }), /50 Mo/);
@@ -313,7 +487,8 @@ await test("A failed audio activation allows a later retry", async () => {
 });
 await test("Cutter imports commit only the latest decoded file", async () => {
   const a = deferred(),
-    revoked = [];
+    revoked = [],
+    durationChecks = [];
   class AudioProbe {
     constructor() {
       this.events = {};
@@ -333,7 +508,15 @@ await test("Cutter imports commit only the latest decoded file", async () => {
     }
   }
   const s = {
-    window: { BeatLabCore: testCore },
+    window: {
+      BeatLabCore: {
+        ...testCore,
+        checkAudioFileDuration: async (blob, maxSeconds) => {
+          durationChecks.push(maxSeconds);
+          return 1;
+        },
+      },
+    },
     fileLoad: core.latestOperation(),
     Audio: AudioProbe,
     stop() {},
@@ -377,6 +560,7 @@ await test("Cutter imports commit only the latest decoded file", async () => {
   assert.equal(s.filename.textContent, "B.wav", s.message.textContent);
   assert.equal(s.buffer.id, "B");
   assert.equal(s.fileUrl, "B.wav");
+  assert.deepEqual(durationChecks, [300, 300]);
 });
 await test("A failed cutter import keeps the previously loaded file", async () => {
   const testCore = {
@@ -406,6 +590,31 @@ await test("A failed cutter import keeps the previously loaded file", async () =
   assert.equal(s.fileUrl, "previous.wav");
   assert.equal(enabled, true);
   assert.match(s.message.textContent, /L’ancien fichier reste chargé/);
+});
+await test("Cutter rejects decoded audio beyond its five-minute cap", async () => {
+  let enabled;
+  const s = {
+    window: { BeatLabCore: testCore },
+    fileLoad: core.latestOperation(),
+    stop() {},
+    enable: (value) => (enabled = value),
+    message: {},
+    buffer: { id: "previous" },
+    fileUrl: "previous.wav",
+    startInput: {},
+    endInput: {},
+    ensureAudio: () => ({
+      decodeAudioData: async () => ({ duration: 300.01 }),
+    }),
+  };
+  bind(s, "async " + fn(cut, "loadFile"));
+  await s.loadFile(
+    file("decoded-too-long", async () => ({ slice() { return this; } })),
+  );
+  assert.equal(s.buffer.id, "previous");
+  assert.equal(s.fileUrl, "previous.wav");
+  assert.equal(enabled, true);
+  assert.match(s.message.textContent, /5 minutes/);
 });
 await test("Cutter metadata finishing late cannot replace the current file; its URL is released", async () => {
   const probes = [],
@@ -551,6 +760,9 @@ function gameFixture() {
     mode: "drums",
     bestByMode: { drums: 0 },
     bestPatternsByMode: { drums: 0 },
+    saveScores() {
+      s.scoreWrites = (s.scoreWrites || 0) + 1;
+    },
     completedPatterns: 0,
     tempo: 630,
     keyboardGame: false,
@@ -587,6 +799,7 @@ await test("Two correct game responses are accepted without waiting for animatio
   assert.equal(s.inputIndex, 2);
   assert.equal(s.phase, "between");
   assert.equal(s.bestByMode.drums, 2);
+  assert.equal(s.scoreWrites, 1);
   s.stopGame();
   waits[0].resolve();
   await second;
