@@ -1,64 +1,183 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11110f">
-  <title>Découpeur audio — Beat Lab 808</title>
-  <link rel="stylesheet" href="samples.css?v=b9e88c6b02da">
-<link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
-<meta name="description" content="Découpe tes fichiers audio et exporte une sélection en WAV, directement dans ton navigateur.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon.png">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="fr_FR">
-<meta property="og:site_name" content="Beat Lab 808">
-<meta property="og:title" content="Découpeur audio — Beat Lab 808">
-<meta property="og:description" content="Découpe tes fichiers audio et exporte une sélection en WAV, directement dans ton navigateur.">
-<meta property="og:url" content="https://izzyashtn.github.io/beat-lab-808/samples.html">
-<meta property="og:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
-<meta name="twitter:card" content="summary_large_image">
-</head>
-<body>
-<a class="lab-skip" href="#contenu">Aller au contenu</a>
-<div class="lab-shell">
-  <header class="lab-header">
-      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
-        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
-        <span>Beat Lab <b>808</b></span>
-      </a>
-      <nav class="lab-nav" aria-label="Ateliers musicaux">
-        <a href="ateliers.html">Ateliers</a>
-        <a href="groove-mystere.html">Groove Mystère</a>
-        <a href="sequencer.html">Séquenceur de samples</a>
-        <a href="index.html">Boîte à rythmes 808</a>
-        <a href="samples.html" aria-current="page">Découpeur audio</a>
-        <a href="effects.html">Effets audio</a>
-      </nav>
-    </header>
-<main id="contenu" tabindex="-1">
-  <div class="eyebrow">Découpeur de sons · fichiers locaux · sans envoi</div>
-  <h1>Découpeur <span>audio</span></h1>
-  <p class="intro">Écoute un son, sélectionne le passage qui t’intéresse et exporte-le en WAV pour le glisser dans Logic Pro ou ton sampler.</p>
-  <section class="card">
-    <label class="drop" id="drop"><input id="file" type="file" accept="audio/*"><span><strong>Choisir un fichier audio</strong><br>ou glisser-déposer un sample ici<br><small>Le fichier reste sur ton appareil.</small></span></label>
-    <div class="fileline"><span class="filename" id="filename">Aucun fichier chargé</span><span id="meta">—</span></div>
-    <div class="wavebox"><canvas id="wave" role="img" aria-label="Forme d’onde du fichier audio. Pour sélectionner au clavier, utilise les champs Début et Fin ci-dessous."></canvas></div>
-    <div class="wavehelp"><span>Glisse sur la forme d’onde ou règle les champs Début et Fin ci-dessous.</span><button type="button" class="btn" id="reset" disabled>Tout sélectionner</button></div>
-    <div class="controls"><div class="timefield"><label for="start">Début · secondes</label><input id="start" type="number" min="0" step="0.001" value="0" disabled></div><div class="timefield"><label for="end">Fin · secondes</label><input id="end" type="number" min="0" step="0.001" value="0" disabled></div></div>
-    <div class="transport"><button type="button" class="btn primary" id="play" disabled>▶ Écouter la sélection</button><button type="button" class="btn" id="stop" disabled>■ Arrêter</button><button type="button" class="btn primary" id="export" disabled>↓ Exporter en WAV</button><div class="gain-control"><label for="gain">Volume</label><input id="gain" type="range" min="0" max="100" step="5" value="100"><output id="gain-value">100%</output></div><button type="button" class="btn" id="test">♪ Test de sortie</button><span class="readout" id="position">00:00.000</span></div>
-    <div class="toast" id="message" role="status" aria-live="polite"></div>
-    <div class="tip"><strong>Workflow :</strong> isole une attaque de guitare ou une texture, puis importe le WAV dans Logic Pro pour le resampler, le renverser ou le traiter.</div>
-  </section>
-  <p class="foot">Décodage, écoute et export se font dans ton navigateur. Le fichier audio n’est pas téléversé vers GitHub.</p>
-</main>
-<footer class="lab-footer">
-      <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p><a href="https://github.com/IzzyAsHTn/beat-lab-808">Code source sur GitHub</a>
-      <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
-    </footer>
-</div>
-<script src="samples.js?v=442a9d5ba20f"></script>
-</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#11110f">
+    <title>Découpeur audio — Beat Lab 808</title>
+    <link rel="stylesheet" href="samples.css?v=b9e88c6b02da">
+    <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
+    <meta
+      name="description"
+      content="Découpe tes fichiers audio et exporte une sélection en WAV, directement dans ton navigateur.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link
+      rel="alternate icon"
+      type="image/png"
+      sizes="32x32"
+      href="favicon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:site_name" content="Beat Lab 808">
+    <meta property="og:title" content="Découpeur audio — Beat Lab 808">
+    <meta
+      property="og:description"
+      content="Découpe tes fichiers audio et exporte une sélection en WAV, directement dans ton navigateur.">
+    <meta
+      property="og:url"
+      content="https://izzyashtn.github.io/beat-lab-808/samples.html">
+    <meta
+      property="og:image"
+      content="https://izzyashtn.github.io/beat-lab-808/partage.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta
+      property="og:image:alt"
+      content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
+    <meta name="twitter:card" content="summary_large_image">
+  </head>
+  <body>
+    <a class="lab-skip" href="#contenu">Aller au contenu</a>
+    <div class="lab-shell">
+      <header class="lab-header">
+        <a
+          class="lab-brand"
+          href="ateliers.html"
+          aria-label="Beat Lab 808 — accueil des ateliers"
+        >
+          <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a" />
+            <path
+              d="M10 25V15m7 14V11m6 16V13m7 10v-6"
+              stroke="#17180f"
+              stroke-width="3"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Beat Lab <b>808</b></span>
+        </a>
+        <nav class="lab-nav" aria-label="Ateliers musicaux">
+          <a href="ateliers.html">Ateliers</a>
+          <a href="groove-mystere.html">Groove Mystère</a>
+          <a href="sequencer.html">Séquenceur de samples</a>
+          <a href="index.html">Boîte à rythmes 808</a>
+          <a href="samples.html" aria-current="page">Découpeur audio</a>
+          <a href="effects.html">Effets audio</a>
+        </nav>
+      </header>
+      <main id="contenu" tabindex="-1">
+        <div class="eyebrow">
+          Découpeur de sons · fichiers locaux · sans envoi
+        </div>
+        <h1>Découpeur <span>audio</span></h1>
+        <p class="intro">
+          Écoute un son, sélectionne le passage qui t’intéresse et exporte-le en
+          WAV pour le glisser dans Logic Pro ou ton sampler.
+        </p>
+        <section class="card">
+          <label class="drop" id="drop"
+            ><input id="file" type="file" accept="audio/*"><span
+              ><strong>Choisir un fichier audio</strong><br>ou glisser-déposer
+              un sample ici<br><small
+                >50 Mo maximum · Le fichier reste sur ton appareil.</small
+              ></span
+            ></label
+          >
+          <div class="fileline">
+            <span class="filename" id="filename">Aucun fichier chargé</span
+            ><span id="meta">—</span>
+          </div>
+          <div class="wavebox">
+            <canvas
+              id="wave"
+              role="img"
+              aria-label="Forme d’onde du fichier audio. Pour sélectionner au clavier, utilise les champs Début et Fin ci-dessous."
+            ></canvas>
+          </div>
+          <div class="wavehelp">
+            <span
+              >Glisse sur la forme d’onde ou règle les champs Début et Fin
+              ci-dessous.</span
+            ><button type="button" class="btn" id="reset" disabled>
+              Tout sélectionner
+            </button>
+          </div>
+          <div class="controls">
+            <div class="timefield">
+              <label for="start">Début · secondes</label
+              ><input
+                id="start"
+                type="number"
+                min="0"
+                step="0.001"
+                value="0"
+                disabled>
+            </div>
+            <div class="timefield">
+              <label for="end">Fin · secondes</label
+              ><input
+                id="end"
+                type="number"
+                min="0"
+                step="0.001"
+                value="0"
+                disabled>
+            </div>
+          </div>
+          <div class="transport">
+            <button type="button" class="btn primary" id="play" disabled>
+              ▶ Écouter la sélection</button
+            ><button type="button" class="btn" id="stop" disabled>
+              ■ Arrêter</button
+            ><button type="button" class="btn primary" id="export" disabled>
+              ↓ Exporter en WAV
+            </button>
+            <div class="gain-control">
+              <label for="gain">Volume</label
+              ><input
+                id="gain"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value="100"><output id="gain-value">100%</output>
+            </div>
+            <button type="button" class="btn" id="test">♪ Test de sortie</button
+            ><span class="readout" id="position">00:00.000</span>
+          </div>
+          <div
+            class="toast"
+            id="message"
+            role="status"
+            aria-live="polite"
+          ></div>
+          <div class="tip">
+            <strong>Workflow :</strong> isole une attaque de guitare ou une
+            texture, puis importe le WAV dans Logic Pro pour le resampler, le
+            renverser ou le traiter.
+          </div>
+        </section>
+        <p class="foot">
+          Décodage, écoute et export se font dans ton navigateur. Le fichier
+          audio n’est pas téléversé vers GitHub.
+        </p>
+      </main>
+      <footer class="lab-footer">
+        <p>
+          <strong>Pour écouter :</strong> commence à volume modéré. Un casque
+          est conseillé. Clique sur le bouton de lecture de l’atelier pour
+          démarrer le son.
+        </p>
+        <a href="https://github.com/IzzyAsHTn/beat-lab-808"
+          >Code source sur GitHub</a
+        >
+        <a href="ateliers.html"
+          >Tous les ateliers <span aria-hidden="true">→</span></a
+        >
+      </footer>
+    </div>
+    <script src="lab-core.js?v=b802578c1247"></script>
+    <script src="samples.js?v=b45aace626cf"></script>
+  </body>
 </html>

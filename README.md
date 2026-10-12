@@ -5,7 +5,7 @@ Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte
 ## Outils
 
 - `ateliers.html` — page d’accueil des ateliers musicaux, avec un accès à tous les outils.
-- `groove-mystere.html` — jeu musical inspiré du Simon : écoute la séquence de notes ou de percussions et reproduis-la; la difficulté augmente au fil des tours.
+- `groove-mystere.html` — jeu musical inspiré du Simon : écoute la séquence de notes ou de percussions et reproduis-la ; la difficulté augmente au fil des tours. Les pads permettent aussi de découvrir les sons avant de jouer. Le bouton Arrêter annule la partie et ses sons en cours.
 - `index.html` — boîte à rythmes 8 voix et 16 pas avec deux kits. Le kit TR-808 emploie un clap synthétisé en rafales de bruit filtré et une courte réverbération; le kit Industriel joue le sample `industrial-clap.wav`, avec tuning par demi-tons. Chaque voix a ses boutons Mute, Solo et effacement du motif. Son motif, le kit, le tempo et le swing sont mémorisés dans le navigateur.
 - `sequencer.html` — séquenceur de samples 8 pistes, boucles de 8 ou 16 pas, swing, volume, panoramique, Mute et Solo indépendants par piste, ainsi que filtre passe-bas, saturation, écho et réverbération par piste. Les pas masqués par la longueur choisie restent mémorisés.
 - `samples.html` — lecteur et découpeur local de samples, forme d’onde, écoute et export WAV.
@@ -34,7 +34,7 @@ Pour vérifier localement : `python3 -m http.server 8080`, puis ouvre `http://lo
 
 Le tempo de la boîte à rythmes respecte la valeur affichée avec ou sans swing. Les indicateurs planifiés sont annulés à l’arrêt et les erreurs de sauvegarde sont affichées. Le test de sortie du découpeur respecte son réglage de volume.
 
-Les grilles proposent une seule case dans l’ordre de tabulation : flèches pour changer de pas ou de piste, Début/Fin pour les extrémités de la ligne, Espace ou Entrée pour activer une case. Elles conservent la présentation horizontale d’origine : commandes à gauche, pas alignés à droite. Sur petit écran, la grille entière défile horizontalement ; les en-têtes de pas restent affichés. Les commandes Mute/Solo et d’import sont agrandies sur petit écran. Les bordures contrastées et les focus visibles sont conservés.
+Les grilles proposent une seule case dans l’ordre de tabulation : flèches pour changer de pas ou de piste, Début/Fin pour les extrémités de la ligne, Espace ou Entrée pour activer une case. Elles conservent la présentation horizontale d’origine : commandes à gauche, pas alignés à droite. Sur petit écran, la grille défile horizontalement ; les noms des pistes restent repérables pendant le défilement et les en-têtes de pas restent affichés. Les commandes Mute/Solo et d’import sont agrandies sur petit écran. Les bordures contrastées et les focus visibles sont conservés.
 
 Les styles et scripts des cinq ateliers sont dans des fichiers séparés. `lab-tools.css` contient les adaptations des deux grilles ; `lab-grid.js` contient leur navigation au clavier. Les URL CSS et JS portent une version dérivée de leur contenu : actualiser cette version après toute modification du fichier concerné.
 
@@ -44,6 +44,15 @@ Avec Node.js installé :
 
 ```sh
 node tests/regression.mjs
+node tests/interaction-regression.mjs
 ```
 
 Ces tests exécutent les fonctions du site avec une horloge, un stockage et un lecteur audio simulés. Ils couvrent le tempo (60, 96, 100 et 160 BPM, swing activé/désactivé), l’annulation des indicateurs, les erreurs de sauvegarde, le volume du bip et la navigation clavier. Compléter par les essais d’import, de sauvegarde/restauration, d’export audio et d’affichage dans un navigateur.
+
+## Fiabilité des interactions
+
+`lab-core.js` fournit les jetons d’opération, la file d’écriture locale et une durée de pas commune aux deux grilles. Les imports périmés sont ignorés et les écritures des samples sont ordonnées ; un retrait annule le chargement en cours sur sa piste. Les curseurs du mixage gardent leur précision à la souris, avec un déplacement de 1 % par flèche au clavier (10 % avec Maj), et annoncent leur valeur lisible.
+
+Les imports des trois outils audio sont limités à 50 Mo par fichier avant lecture ou décodage. Le rendu Effets conserve aussi sa limite de deux minutes. Cette garde réduit les gros chargements ; la mémoire nécessaire dépend toujours de la durée et du format décodé.
+
+Les tests d’interaction reproduisent les chargements terminés dans le désordre, les écritures lentes ou échouées, la restauration concurrente, le retrait pendant un import, l’activation audio différée, le swing commun, les appuis rapides du jeu, son score et l’annulation de ses opérations en attente. Les fonctions purement liées à l’état sont testées directement ; les gestionnaires de production sont exécutés avec des doublures contrôlées pour l’audio, les horloges et le stockage.

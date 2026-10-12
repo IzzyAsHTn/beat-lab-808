@@ -1,37 +1,169 @@
-<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11110f"><title>Effets audio — Beat Lab 808</title><link rel="stylesheet" href="effects.css?v=5ec47b4df5f7"><link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
-<meta name="description" content="Préécoute, transforme et exporte tes fichiers audio avec filtre, saturation, écho et réverbération.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon.png">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="fr_FR">
-<meta property="og:site_name" content="Beat Lab 808">
-<meta property="og:title" content="Effets audio — Beat Lab 808">
-<meta property="og:description" content="Préécoute, transforme et exporte tes fichiers audio avec filtre, saturation, écho et réverbération.">
-<meta property="og:url" content="https://izzyashtn.github.io/beat-lab-808/effects.html">
-<meta property="og:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
-<meta name="twitter:card" content="summary_large_image">
-</head><body>
-<a class="lab-skip" href="#contenu">Aller au contenu</a><div class="lab-shell"><header class="lab-header">
-      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
-        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
-        <span>Beat Lab <b>808</b></span>
-      </a>
-      <nav class="lab-nav" aria-label="Ateliers musicaux">
-        <a href="ateliers.html">Ateliers</a>
-        <a href="groove-mystere.html">Groove Mystère</a>
-        <a href="sequencer.html">Séquenceur de samples</a>
-        <a href="index.html">Boîte à rythmes 808</a>
-        <a href="samples.html">Découpeur audio</a>
-        <a href="effects.html" aria-current="page">Effets audio</a>
-      </nav>
-    </header>
-<main id="contenu" tabindex="-1"><div class="eyebrow">Traitement audio · effets créatifs · export WAV</div><h1>Effets <span>audio</span></h1><p class="intro">Préécoute ton son en boucle pour régler les effets en direct, puis crée le rendu WAV. Pour composer sur plusieurs pistes, ouvre le <a href="sequencer.html">Séquenceur de samples</a>. Le rendu est limité à 2 minutes afin de préserver la mémoire du navigateur.</p><section class="card"><div class="row"><label class="field">Fichier audio <input id="file" type="file" accept="audio/*"></label><span id="name" class="status">Aucun fichier chargé</span></div><div class="effectrow"><label for="cut">Filtre passe-bas</label><input id="cut" type="range" min="500" max="18000" value="18000"><output id="cutv">18 kHz</output></div><div class="effectrow"><label for="drive">Saturation</label><input id="drive" type="range" min="0" max="100" value="0"><output id="drivev">0%</output></div><div class="effectrow"><label for="delay">Écho</label><input id="delay" type="range" min="0" max="70" value="0"><output id="delayv">0%</output></div><div class="effectrow"><label for="reverb">Réverbération</label><input id="reverb" type="range" min="0" max="70" value="0"><output id="reverbv">0%</output></div><div class="row render-controls"><button type="button" id="preview" class="btn" disabled>▶ Préécouter en boucle</button><button type="button" id="render" class="btn primary" disabled>Créer le rendu et préparer l’écoute</button><button type="button" id="play" class="btn" disabled>▶ Écouter le rendu</button><button type="button" id="download" class="btn" disabled>↓ Télécharger le WAV traité</button><span id="status" class="status" role="status" aria-live="polite"></span></div><div class="tip"><strong>Préécoute :</strong> lance le son en boucle puis ajuste les effets en direct. Le rendu WAV reste une étape séparée, à lancer quand le réglage te convient.<br><strong>Idée :</strong> commence par baisser le filtre, ajoute une légère saturation, puis dose l’écho ou la réverbération pour placer la guitare dans un espace numérique.</div></section><p class="foot">Les fichiers audio ne quittent pas ton appareil. Le WAV rendu peut être importé dans Logic Pro.</p></main>
-<footer class="lab-footer">
-      <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p><a href="https://github.com/IzzyAsHTn/beat-lab-808">Code source sur GitHub</a>
-      <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
-    </footer>
-</div><script src="effects.js?v=e78c73dd805d"></script></body></html>
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#11110f">
+    <title>Effets audio — Beat Lab 808</title>
+    <link rel="stylesheet" href="effects.css?v=5ec47b4df5f7">
+    <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
+    <meta
+      name="description"
+      content="Préécoute, transforme et exporte tes fichiers audio avec filtre, saturation, écho et réverbération.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link
+      rel="alternate icon"
+      type="image/png"
+      sizes="32x32"
+      href="favicon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:site_name" content="Beat Lab 808">
+    <meta property="og:title" content="Effets audio — Beat Lab 808">
+    <meta
+      property="og:description"
+      content="Préécoute, transforme et exporte tes fichiers audio avec filtre, saturation, écho et réverbération.">
+    <meta
+      property="og:url"
+      content="https://izzyashtn.github.io/beat-lab-808/effects.html">
+    <meta
+      property="og:image"
+      content="https://izzyashtn.github.io/beat-lab-808/partage.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta
+      property="og:image:alt"
+      content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
+    <meta name="twitter:card" content="summary_large_image">
+  </head>
+  <body>
+    <a class="lab-skip" href="#contenu">Aller au contenu</a>
+    <div class="lab-shell">
+      <header class="lab-header">
+        <a
+          class="lab-brand"
+          href="ateliers.html"
+          aria-label="Beat Lab 808 — accueil des ateliers"
+        >
+          <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a" />
+            <path
+              d="M10 25V15m7 14V11m6 16V13m7 10v-6"
+              stroke="#17180f"
+              stroke-width="3"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Beat Lab <b>808</b></span>
+        </a>
+        <nav class="lab-nav" aria-label="Ateliers musicaux">
+          <a href="ateliers.html">Ateliers</a>
+          <a href="groove-mystere.html">Groove Mystère</a>
+          <a href="sequencer.html">Séquenceur de samples</a>
+          <a href="index.html">Boîte à rythmes 808</a>
+          <a href="samples.html">Découpeur audio</a>
+          <a href="effects.html" aria-current="page">Effets audio</a>
+        </nav>
+      </header>
+      <main id="contenu" tabindex="-1">
+        <div class="eyebrow">
+          Traitement audio · effets créatifs · export WAV
+        </div>
+        <h1>Effets <span>audio</span></h1>
+        <p class="intro">
+          Préécoute ton son en boucle pour régler les effets en direct, puis
+          crée le rendu WAV. Pour composer sur plusieurs pistes, ouvre le
+          <a href="sequencer.html">Séquenceur de samples</a>. Les fichiers sont
+          limités à 50 Mo et le rendu à 2 minutes afin de préserver la mémoire
+          du navigateur.
+        </p>
+        <section class="card">
+          <div class="row">
+            <label class="field"
+              >Fichier audio
+              <input id="file" type="file" accept="audio/*"></label
+            ><span id="name" class="status">Aucun fichier chargé</span>
+          </div>
+          <div class="effectrow">
+            <label for="cut">Filtre passe-bas</label
+            ><input
+              id="cut"
+              type="range"
+              min="500"
+              max="18000"
+              value="18000"><output id="cutv">18 kHz</output>
+          </div>
+          <div class="effectrow">
+            <label for="drive">Saturation</label
+            ><input
+              id="drive"
+              type="range"
+              min="0"
+              max="100"
+              value="0"><output id="drivev">0%</output>
+          </div>
+          <div class="effectrow">
+            <label for="delay">Écho</label
+            ><input id="delay" type="range" min="0" max="70" value="0"><output
+              id="delayv"
+              >0%</output
+            >
+          </div>
+          <div class="effectrow">
+            <label for="reverb">Réverbération</label
+            ><input
+              id="reverb"
+              type="range"
+              min="0"
+              max="70"
+              value="0"><output id="reverbv">0%</output>
+          </div>
+          <div class="row render-controls">
+            <button type="button" id="preview" class="btn" disabled>
+              ▶ Préécouter en boucle</button
+            ><button type="button" id="render" class="btn primary" disabled>
+              Créer le rendu et préparer l’écoute</button
+            ><button type="button" id="play" class="btn" disabled>
+              ▶ Écouter le rendu</button
+            ><button type="button" id="download" class="btn" disabled>
+              ↓ Télécharger le WAV traité</button
+            ><span
+              id="status"
+              class="status"
+              role="status"
+              aria-live="polite"
+            ></span>
+          </div>
+          <div class="tip">
+            <strong>Préécoute :</strong> lance le son en boucle puis ajuste les
+            effets en direct. Le rendu WAV reste une étape séparée, à lancer
+            quand le réglage te convient.<br><strong>Idée :</strong> commence
+            par baisser le filtre, ajoute une légère saturation, puis dose
+            l’écho ou la réverbération pour placer la guitare dans un espace
+            numérique.
+          </div>
+        </section>
+        <p class="foot">
+          Les fichiers audio ne quittent pas ton appareil. Le WAV rendu peut
+          être importé dans Logic Pro.
+        </p>
+      </main>
+      <footer class="lab-footer">
+        <p>
+          <strong>Pour écouter :</strong> commence à volume modéré. Un casque
+          est conseillé. Clique sur le bouton de lecture de l’atelier pour
+          démarrer le son.
+        </p>
+        <a href="https://github.com/IzzyAsHTn/beat-lab-808"
+          >Code source sur GitHub</a
+        >
+        <a href="ateliers.html"
+          >Tous les ateliers <span aria-hidden="true">→</span></a
+        >
+      </footer>
+    </div>
+    <script src="lab-core.js?v=b802578c1247"></script>
+    <script src="effects.js?v=58e760f3a119"></script>
+  </body>
+</html>

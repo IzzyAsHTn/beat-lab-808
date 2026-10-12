@@ -1,45 +1,161 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11110f"><title>Séquenceur de samples — Beat Lab 808</title>
-<link rel="stylesheet" href="sequencer.css?v=fea50818dcf2"><link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
-<link rel="stylesheet" href="lab-tools.css?v=171ea9acd5d6">
-<meta name="description" content="Charge tes samples sur huit pistes, programme des boucles et ajuste le mixage et les effets.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon.png">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="fr_FR">
-<meta property="og:site_name" content="Beat Lab 808">
-<meta property="og:title" content="Séquenceur de samples — Beat Lab 808">
-<meta property="og:description" content="Charge tes samples sur huit pistes, programme des boucles et ajuste le mixage et les effets.">
-<meta property="og:url" content="https://izzyashtn.github.io/beat-lab-808/sequencer.html">
-<meta property="og:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
-<meta name="twitter:card" content="summary_large_image">
-</head><body data-tool="sequencer">
-<a class="lab-skip" href="#contenu">Aller au contenu</a><div class="lab-shell">
-<header class="lab-header">
-      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
-        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
-        <span>Beat Lab <b>808</b></span>
-      </a>
-      <nav class="lab-nav" aria-label="Ateliers musicaux">
-        <a href="ateliers.html">Ateliers</a>
-        <a href="groove-mystere.html">Groove Mystère</a>
-        <a href="sequencer.html" aria-current="page">Séquenceur de samples</a>
-        <a href="index.html">Boîte à rythmes 808</a>
-        <a href="samples.html">Découpeur audio</a>
-        <a href="effects.html">Effets audio</a>
-      </nav>
-    </header>
-<main id="contenu" tabindex="-1">
-<div class="eyebrow">Séquenceur de samples · 8 pistes · boucles de 8 ou 16 pas</div><h1>Séquenceur <span>de samples</span></h1><p class="intro">Charge tes samples une fois : ils restent enregistrés dans ce navigateur quand tu changes de module ou reviens plus tard. Motif, tempo, longueur, volume, panoramique, Mute, Solo et effets de chaque piste sont sauvegardés automatiquement.</p>
-<section class="card"><div class="row"><button id="play" class="btn primary" type="button">▶ Jouer</button><button id="clear" class="btn" type="button">Effacer les pas</button><label class="field">Tempo <input id="tempo" type="range" min="60" max="160" value="100"><b id="bpm">100</b> BPM</label><label class="field">Longueur <select id="length"><option value="8">8 pas</option><option value="16" selected>16 pas</option></select></label><label class="field"><input id="swing" type="checkbox"> Swing</label><span id="status" class="status" role="status" aria-live="polite">Chargement des réglages…</span></div><p id="persist" class="persist">Sauvegarde des sons et réglages sur cet appareil…</p><div class="fxhint">Les boutons <strong>Mute</strong> et <strong>Solo</strong> et les curseurs <strong>Volume</strong> et <strong>Panoramique</strong> sont visibles sous chaque piste. Ils agissent sur son sample et se sauvegardent avec le motif. Ouvre « ⚡ FX · filtre / saturation / écho / réverb » pour ses effets.</div><p id="grid-help" class="grid-help">Grille : Tab pour entrer ou sortir, flèches pour te déplacer, Espace ou Entrée pour activer un pas. Sur petit écran, fais défiler la grille horizontalement pour atteindre les autres pas.</p><section class="gridwrap" aria-label="Grille de samples"><div class="grid" id="grid" role="group" aria-label="Grille de séquençage" aria-describedby="grid-help"></div></section><div class="tip"><strong>Longueur de boucle :</strong> choisis 8 ou 16 pas. En mode 8 pas, les pas 9 à 16 restent mémorisés et réapparaissent si tu rallonges la boucle.</div></section><p class="foot">Les samples restent dans le stockage privé de ce navigateur; ils ne sont pas envoyés à GitHub. Pour les retrouver, utilise le même navigateur et le même appareil. Effacer les données du site dans le navigateur supprime aussi ces samples et les réglages sauvegardés. Garde une copie de tes sons.</p>
-</main>
-<footer class="lab-footer">
-      <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p><a href="https://github.com/IzzyAsHTn/beat-lab-808">Code source sur GitHub</a>
-      <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
-    </footer>
-</div><script src="lab-grid.js?v=72a405eca95b"></script>
-<script src="sequencer.js?v=b375f36012a9"></script></body></html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="theme-color" content="#11110f">
+    <title>Séquenceur de samples — Beat Lab 808</title>
+    <link rel="stylesheet" href="sequencer.css?v=fea50818dcf2">
+    <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
+    <link rel="stylesheet" href="lab-tools.css?v=9d9a0ceddf17">
+    <meta
+      name="description"
+      content="Charge tes samples sur huit pistes, programme des boucles et ajuste le mixage et les effets.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link
+      rel="alternate icon"
+      type="image/png"
+      sizes="32x32"
+      href="favicon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:site_name" content="Beat Lab 808">
+    <meta property="og:title" content="Séquenceur de samples — Beat Lab 808">
+    <meta
+      property="og:description"
+      content="Charge tes samples sur huit pistes, programme des boucles et ajuste le mixage et les effets.">
+    <meta
+      property="og:url"
+      content="https://izzyashtn.github.io/beat-lab-808/sequencer.html">
+    <meta
+      property="og:image"
+      content="https://izzyashtn.github.io/beat-lab-808/partage.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta
+      property="og:image:alt"
+      content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
+    <meta name="twitter:card" content="summary_large_image">
+  </head>
+  <body data-tool="sequencer">
+    <a class="lab-skip" href="#contenu">Aller au contenu</a>
+    <div class="lab-shell">
+      <header class="lab-header">
+        <a
+          class="lab-brand"
+          href="ateliers.html"
+          aria-label="Beat Lab 808 — accueil des ateliers"
+        >
+          <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a" />
+            <path
+              d="M10 25V15m7 14V11m6 16V13m7 10v-6"
+              stroke="#17180f"
+              stroke-width="3"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Beat Lab <b>808</b></span>
+        </a>
+        <nav class="lab-nav" aria-label="Ateliers musicaux">
+          <a href="ateliers.html">Ateliers</a>
+          <a href="groove-mystere.html">Groove Mystère</a>
+          <a href="sequencer.html" aria-current="page">Séquenceur de samples</a>
+          <a href="index.html">Boîte à rythmes 808</a>
+          <a href="samples.html">Découpeur audio</a>
+          <a href="effects.html">Effets audio</a>
+        </nav>
+      </header>
+      <main id="contenu" tabindex="-1">
+        <div class="eyebrow">
+          Séquenceur de samples · 8 pistes · boucles de 8 ou 16 pas
+        </div>
+        <h1>Séquenceur <span>de samples</span></h1>
+        <p class="intro">
+          Fichiers de 50 Mo maximum. Charge tes samples une fois : ils restent
+          enregistrés dans ce navigateur quand tu changes de module ou reviens
+          plus tard. Motif, tempo, longueur, volume, panoramique, Mute, Solo et
+          effets de chaque piste sont sauvegardés automatiquement.
+        </p>
+        <section class="card">
+          <div class="row">
+            <button id="play" class="btn primary" type="button">▶ Jouer</button
+            ><button id="clear" class="btn" type="button">
+              Effacer les pas</button
+            ><label class="field"
+              >Tempo
+              <input id="tempo" type="range" min="60" max="160" value="100"><b
+                id="bpm"
+                >100</b
+              >
+              BPM</label
+            ><label class="field"
+              >Longueur
+              <select id="length">
+                <option value="8">8 pas</option>
+                <option value="16" selected>16 pas</option>
+              </select></label
+            ><label class="field"
+              ><input id="swing" type="checkbox"> Swing</label
+            ><span id="status" class="status" role="status" aria-live="polite"
+              >Chargement des réglages…</span
+            >
+          </div>
+          <p id="persist" class="persist">
+            Sauvegarde des sons et réglages sur cet appareil…
+          </p>
+          <div class="fxhint">
+            Les boutons <strong>Mute</strong> et <strong>Solo</strong> et les
+            curseurs <strong>Volume</strong> et
+            <strong>Panoramique</strong> sont visibles sous chaque piste. Ils
+            agissent sur son sample et se sauvegardent avec le motif. Ouvre « ⚡
+            FX · filtre / saturation / écho / réverb » pour ses effets.
+          </div>
+          <p id="grid-help" class="grid-help">
+            Grille : Tab pour entrer ou sortir, flèches pour te déplacer, Espace
+            ou Entrée pour activer un pas. Sur petit écran, fais défiler la
+            grille horizontalement pour atteindre les autres pas.
+          </p>
+          <section class="gridwrap" aria-label="Grille de samples">
+            <div
+              class="grid"
+              id="grid"
+              role="group"
+              aria-label="Grille de séquençage"
+              aria-describedby="grid-help"
+            ></div>
+          </section>
+          <div class="tip">
+            <strong>Longueur de boucle :</strong> choisis 8 ou 16 pas. En mode 8
+            pas, les pas 9 à 16 restent mémorisés et réapparaissent si tu
+            rallonges la boucle.
+          </div>
+        </section>
+        <p class="foot">
+          Les samples restent dans le stockage privé de ce navigateur; ils ne
+          sont pas envoyés à GitHub. Pour les retrouver, utilise le même
+          navigateur et le même appareil. Effacer les données du site dans le
+          navigateur supprime aussi ces samples et les réglages sauvegardés.
+          Garde une copie de tes sons.
+        </p>
+      </main>
+      <footer class="lab-footer">
+        <p>
+          <strong>Pour écouter :</strong> commence à volume modéré. Un casque
+          est conseillé. Clique sur le bouton de lecture de l’atelier pour
+          démarrer le son.
+        </p>
+        <a href="https://github.com/IzzyAsHTn/beat-lab-808"
+          >Code source sur GitHub</a
+        >
+        <a href="ateliers.html"
+          >Tous les ateliers <span aria-hidden="true">→</span></a
+        >
+      </footer>
+    </div>
+    <script src="lab-core.js?v=b802578c1247"></script>
+    <script src="lab-grid.js?v=72a405eca95b"></script>
+    <script src="sequencer.js?v=f123980ec8fc"></script>
+  </body>
+</html>
