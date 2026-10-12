@@ -1,0 +1,54 @@
+/* Interfaces mobiles compactes des deux grilles, jusqu’à 650 px. */
+@media (max-width: 650px) {
+  body:is([data-tool="sequencer"], [data-tool="drums"]) .lab-shell {
+    padding-top: 16px;
+  }
+  body[data-tool] .lab-header { margin-bottom: 18px; }
+  body[data-tool] .lab-brand { margin-bottom: 8px; }
+  body[data-tool] .lab-nav { gap: 4px; }
+  body[data-tool] .lab-nav a { padding: 8px 10px; min-height: 44px; }
+  body[data-tool] h1 { font-size: 36px; margin: 8px 0 10px; }
+  body[data-tool] .intro { font-size: 14px; line-height: 1.45; margin-bottom: 16px; }
+  body[data-tool] .grid-help,
+  body[data-tool] .persist { line-height: 1.45; }
+  body[data-tool] .grid-help { margin: 8px 0 6px; }
+  body[data-tool] .lab-footer { margin-top: 22px; padding-top: 16px; gap: 10px; }
+
+  body[data-tool="sequencer"] .card { padding: 10px; }
+  body[data-tool="sequencer"] .row { gap: 6px; }
+  body[data-tool="sequencer"] .row > .btn { min-height: 44px; }
+  body[data-tool="sequencer"] .field { padding: 5px 7px; }
+  body[data-tool="sequencer"] .fxhint { line-height: 1.45; margin-top: 6px; }
+  body[data-tool="sequencer"] .gridwrap { margin-top: 8px; }
+  body[data-tool="sequencer"] .track { margin: 4px 0; grid-template-rows: auto 92px auto; }
+  body[data-tool="sequencer"] .sampleline { margin: 2px 0; gap: 3px; }
+  body[data-tool="sequencer"] .sampleline input {
+    grid-column: 1; grid-row: 1; width: 100%; font-size: 0;
+  }
+  body[data-tool="sequencer"] .sampleline input::file-selector-button {
+    min-height: 44px; max-width: 100%; padding: 0 6px; font-size: 12px;
+  }
+  body[data-tool="sequencer"] .remove-sample { grid-column: 2; grid-row: 1; }
+  body[data-tool="sequencer"] .filename { grid-row: 2; line-height: 1.4; }
+  body[data-tool="sequencer"] .trackmix { height: 92px; gap: 4px; }
+  body[data-tool="sequencer"] .track-toggle {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  body[data-tool="sequencer"] .fx summary { padding: 4px 6px; }
+
+  body[data-tool="drums"] .machine { padding: 12px; }
+  body[data-tool="drums"] .topbar { gap: 10px; padding-bottom: 12px; }
+  body[data-tool="drums"] .seq { padding-top: 12px; }
+  body[data-tool="drums"] .track { margin: 6px 0; }
+  body[data-tool="drums"] .voice-tools { margin-top: 2px; align-items: center; }
+  body[data-tool="drums"] .voice-toggle:is(.mute, .solo) {
+    flex-basis: 38px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+  }
+  body[data-tool="drums"] .tuning { margin-top: 0; gap: 0; }
+  body[data-tool="drums"] .tuning input { height: 28px; }
+  body[data-tool="drums"] .bottom { margin-top: 16px; padding-top: 12px; gap: 10px; }
+}
