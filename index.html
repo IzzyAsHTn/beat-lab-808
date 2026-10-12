@@ -1,68 +1,155 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#11110f">
-  <title>Boîte à rythmes 808 — Beat Lab 808</title>
-  <link rel="stylesheet" href="index.css?v=2de166e0f6ba">
-<link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
-<link rel="stylesheet" href="lab-tools.css?v=171ea9acd5d6">
-<meta name="description" content="Compose des rythmes avec huit voix de batterie et deux kits. Tes motifs sont sauvegardés dans ce navigateur.">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon.png">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="fr_FR">
-<meta property="og:site_name" content="Beat Lab 808">
-<meta property="og:title" content="Boîte à rythmes 808 — Beat Lab 808">
-<meta property="og:description" content="Compose des rythmes avec huit voix de batterie et deux kits. Tes motifs sont sauvegardés dans ce navigateur.">
-<meta property="og:url" content="https://izzyashtn.github.io/beat-lab-808/index.html">
-<meta property="og:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
-<meta name="twitter:card" content="summary_large_image">
-</head>
-<body data-tool="drums">
-<a class="lab-skip" href="#contenu">Aller au contenu</a>
-<div class="lab-shell">
-  <header class="lab-header">
-      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
-        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
-        <span>Beat Lab <b>808</b></span>
-      </a>
-      <nav class="lab-nav" aria-label="Ateliers musicaux">
-        <a href="ateliers.html">Ateliers</a>
-        <a href="groove-mystere.html">Groove Mystère</a>
-        <a href="sequencer.html">Séquenceur de samples</a>
-        <a href="index.html" aria-current="page">Boîte à rythmes 808</a>
-        <a href="samples.html">Découpeur audio</a>
-        <a href="effects.html">Effets audio</a>
-      </nav>
-    </header>
-<main id="contenu" tabindex="-1">
-  <div class="eyebrow">Boîte à rythmes · deux kits · claps dédiés</div>
-  <h1>Boîte à rythmes <span>808</span></h1>
-  <p class="intro">Choisis le clap synthétisé façon TR-808 ou le sample KRAK du kit Industriel. Le tuning du clap suit le réglage de sa piste. Les motifs, le kit, le tempo et le swing sont mémorisés sur cet appareil.</p>
-  <section class="machine" aria-label="Séquenceur de boîte à rythmes">
-    <div class="topbar">
-      <div class="transport"><button class="play" id="play" type="button">▶ Jouer</button><span class="status" id="status">À l’arrêt</span></div>
-      <label class="tempo">TEMPO <input id="tempo" type="range" min="60" max="160" value="96"><span class="bpm"><span id="bpm">96</span> BPM</span></label>
-      <label class="swing"><input id="swing" type="checkbox"> Swing léger</label>
-      <label class="swing">KIT <select id="kit" aria-label="Choisir le kit de batterie"><option value="808">TR-808 classique</option><option value="industrial">Industriel organique</option></select></label>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#11110f">
+    <title>Boîte à rythmes 808 — Beat Lab 808</title>
+    <link rel="stylesheet" href="index.css?v=2de166e0f6ba">
+    <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
+    <link rel="stylesheet" href="lab-tools.css?v=9d9a0ceddf17">
+    <meta
+      name="description"
+      content="Compose des rythmes avec huit voix de batterie et deux kits. Tes motifs sont sauvegardés dans ce navigateur.">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link
+      rel="alternate icon"
+      type="image/png"
+      sizes="32x32"
+      href="favicon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:site_name" content="Beat Lab 808">
+    <meta property="og:title" content="Boîte à rythmes 808 — Beat Lab 808">
+    <meta
+      property="og:description"
+      content="Compose des rythmes avec huit voix de batterie et deux kits. Tes motifs sont sauvegardés dans ce navigateur.">
+    <meta
+      property="og:url"
+      content="https://izzyashtn.github.io/beat-lab-808/index.html">
+    <meta
+      property="og:image"
+      content="https://izzyashtn.github.io/beat-lab-808/partage.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta
+      property="og:image:alt"
+      content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
+    <meta name="twitter:card" content="summary_large_image">
+  </head>
+  <body data-tool="drums">
+    <a class="lab-skip" href="#contenu">Aller au contenu</a>
+    <div class="lab-shell">
+      <header class="lab-header">
+        <a
+          class="lab-brand"
+          href="ateliers.html"
+          aria-label="Beat Lab 808 — accueil des ateliers"
+        >
+          <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a" />
+            <path
+              d="M10 25V15m7 14V11m6 16V13m7 10v-6"
+              stroke="#17180f"
+              stroke-width="3"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Beat Lab <b>808</b></span>
+        </a>
+        <nav class="lab-nav" aria-label="Ateliers musicaux">
+          <a href="ateliers.html">Ateliers</a>
+          <a href="groove-mystere.html">Groove Mystère</a>
+          <a href="sequencer.html">Séquenceur de samples</a>
+          <a href="index.html" aria-current="page">Boîte à rythmes 808</a>
+          <a href="samples.html">Découpeur audio</a>
+          <a href="effects.html">Effets audio</a>
+        </nav>
+      </header>
+      <main id="contenu" tabindex="-1">
+        <div class="eyebrow">Boîte à rythmes · deux kits · claps dédiés</div>
+        <h1>Boîte à rythmes <span>808</span></h1>
+        <p class="intro">
+          Choisis le clap synthétisé façon TR-808 ou le sample KRAK du kit
+          Industriel. Le tuning du clap suit le réglage de sa piste. Les motifs,
+          le kit, le tempo et le swing sont mémorisés sur cet appareil.
+        </p>
+        <section class="machine" aria-label="Séquenceur de boîte à rythmes">
+          <div class="topbar">
+            <div class="transport">
+              <button class="play" id="play" type="button">▶ Jouer</button
+              ><span class="status" id="status">À l’arrêt</span>
+            </div>
+            <label class="tempo"
+              >TEMPO
+              <input
+                id="tempo"
+                type="range"
+                min="60"
+                max="160"
+                value="96"><span class="bpm"><span id="bpm">96</span> BPM</span></label
+            >
+            <label class="swing"
+              ><input id="swing" type="checkbox"> Swing léger</label
+            >
+            <label class="swing"
+              >KIT
+              <select id="kit" aria-label="Choisir le kit de batterie">
+                <option value="808">TR-808 classique</option>
+                <option value="industrial">Industriel organique</option>
+              </select></label
+            >
+          </div>
+          <p id="grid-help" class="grid-help">
+            Grille : Tab pour entrer ou sortir, flèches pour te déplacer, Espace
+            ou Entrée pour activer un pas. Sur petit écran, fais défiler la
+            grille horizontalement pour atteindre les autres pas.
+          </p>
+          <section class="seq" aria-label="Grille de batterie">
+            <div
+              class="grid"
+              id="grid"
+              role="group"
+              aria-describedby="grid-help"
+            ></div>
+          </section>
+          <div class="bottom">
+            <p>
+              8 voix · 16 pas par mesure · tes motifs sont sauvegardés sur cet
+              appareil
+            </p>
+            <button class="secondary" id="clear" type="button">
+              Effacer la grille
+            </button>
+          </div>
+        </section>
+        <p id="persist" class="persist" role="status" aria-live="polite">
+          Les changements de motif et de réglages sont sauvegardés
+          automatiquement sur cet appareil.
+        </p>
+        <div class="foot">
+          M coupe une voix · S l’écoute seule (plusieurs solos peuvent être
+          combinés). Astuce : place KICK sur 1 et 3, SNARE sur 2 et 4, puis
+          complète le motif à ton goût.
+        </div>
+      </main>
+      <footer class="lab-footer">
+        <p>
+          <strong>Pour écouter :</strong> commence à volume modéré. Un casque
+          est conseillé. Clique sur le bouton de lecture de l’atelier pour
+          démarrer le son.
+        </p>
+        <a href="https://github.com/IzzyAsHTn/beat-lab-808"
+          >Code source sur GitHub</a
+        >
+        <a href="ateliers.html"
+          >Tous les ateliers <span aria-hidden="true">→</span></a
+        >
+      </footer>
     </div>
-    <p id="grid-help" class="grid-help">Grille : Tab pour entrer ou sortir, flèches pour te déplacer, Espace ou Entrée pour activer un pas. Sur petit écran, fais défiler la grille horizontalement pour atteindre les autres pas.</p><section class="seq" aria-label="Grille de batterie"><div class="grid" id="grid" role="group" aria-describedby="grid-help"></div></section>
-    <div class="bottom"><p>8 voix · 16 pas par mesure · tes motifs sont sauvegardés sur cet appareil</p><button class="secondary" id="clear" type="button">Effacer la grille</button></div>
-  </section>
-  <p id="persist" class="persist" role="status" aria-live="polite">Les changements de motif et de réglages sont sauvegardés automatiquement sur cet appareil.</p><div class="foot">M coupe une voix · S l’écoute seule (plusieurs solos peuvent être combinés). Astuce : place KICK sur 1 et 3, SNARE sur 2 et 4, puis complète le motif à ton goût.</div>
-</main>
-<footer class="lab-footer">
-      <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p><a href="https://github.com/IzzyAsHTn/beat-lab-808">Code source sur GitHub</a>
-      <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
-    </footer>
-</div>
-<script src="lab-grid.js?v=72a405eca95b"></script>
-<script src="index.js?v=26dfda7eaa32"></script>
-</body>
+    <script src="lab-core.js?v=b802578c1247"></script>
+    <script src="lab-grid.js?v=72a405eca95b"></script>
+    <script src="index.js?v=4b5a58028ed4"></script>
+  </body>
 </html>

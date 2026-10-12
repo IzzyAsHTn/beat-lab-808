@@ -1,86 +1,202 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111315">
-  <meta name="description" content="Deux jeux de mémoire musicale : une séquence qui s’allonge ou de nouveaux motifs à reproduire.">
-  <title>Groove Mystère — Beat Lab 808</title>
-  <link rel="stylesheet" href="groove-mystere.css?v=219328b66dc2">
-<link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="alternate icon" type="image/png" sizes="32x32" href="favicon.png">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="fr_FR">
-<meta property="og:site_name" content="Beat Lab 808">
-<meta property="og:title" content="Groove Mystère — Beat Lab 808">
-<meta property="og:description" content="Deux jeux de mémoire musicale : une séquence qui s’allonge ou de nouveaux motifs à reproduire.">
-<meta property="og:url" content="https://izzyashtn.github.io/beat-lab-808/groove-mystere.html">
-<meta property="og:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
-<meta name="twitter:card" content="summary_large_image">
-</head>
-<body>
-<a class="lab-skip" href="#contenu">Aller au contenu</a>
-  <div class="lab-shell">
-    <header class="lab-header">
-      <a class="lab-brand" href="ateliers.html" aria-label="Beat Lab 808 — accueil des ateliers">
-        <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a"/><path d="M10 25V15m7 14V11m6 16V13m7 10v-6" stroke="#17180f" stroke-width="3" stroke-linecap="round"/></svg>
-        <span>Beat Lab <b>808</b></span>
-      </a>
-      <nav class="lab-nav" aria-label="Ateliers musicaux">
-        <a href="ateliers.html">Ateliers</a>
-        <a href="groove-mystere.html" aria-current="page">Groove Mystère</a>
-        <a href="sequencer.html">Séquenceur de samples</a>
-        <a href="index.html">Boîte à rythmes 808</a>
-        <a href="samples.html">Découpeur audio</a>
-        <a href="effects.html">Effets audio</a>
-      </nav>
-    </header>
-<main id="contenu" tabindex="-1">
-    <div class="game-header">
-      <div class="brand"><div class="mark" aria-hidden="true">◉</div><div><p class="eyebrow">Atelier musical · 01</p><h1>Groove Mystère</h1></div></div>
-      <div class="level">Jeu <strong id="gameModeTitle">Simon musical</strong></div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111315">
+    <meta
+      name="description"
+      content="Deux jeux de mémoire musicale : une séquence qui s’allonge ou de nouveaux motifs à reproduire.">
+    <title>Groove Mystère — Beat Lab 808</title>
+    <link rel="stylesheet" href="groove-mystere.css?v=c77d300aafc7">
+    <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link
+      rel="alternate icon"
+      type="image/png"
+      sizes="32x32"
+      href="favicon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+    <meta property="og:site_name" content="Beat Lab 808">
+    <meta property="og:title" content="Groove Mystère — Beat Lab 808">
+    <meta
+      property="og:description"
+      content="Deux jeux de mémoire musicale : une séquence qui s’allonge ou de nouveaux motifs à reproduire.">
+    <meta
+      property="og:url"
+      content="https://izzyashtn.github.io/beat-lab-808/groove-mystere.html">
+    <meta
+      property="og:image"
+      content="https://izzyashtn.github.io/beat-lab-808/partage.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta
+      property="og:image:alt"
+      content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
+    <meta name="twitter:card" content="summary_large_image">
+  </head>
+  <body>
+    <a class="lab-skip" href="#contenu">Aller au contenu</a>
+    <div class="lab-shell">
+      <header class="lab-header">
+        <a
+          class="lab-brand"
+          href="ateliers.html"
+          aria-label="Beat Lab 808 — accueil des ateliers"
+        >
+          <svg class="lab-mark" viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="1" y="1" width="38" height="38" rx="10" fill="#d8f36a" />
+            <path
+              d="M10 25V15m7 14V11m6 16V13m7 10v-6"
+              stroke="#17180f"
+              stroke-width="3"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Beat Lab <b>808</b></span>
+        </a>
+        <nav class="lab-nav" aria-label="Ateliers musicaux">
+          <a href="ateliers.html">Ateliers</a>
+          <a href="groove-mystere.html" aria-current="page">Groove Mystère</a>
+          <a href="sequencer.html">Séquenceur de samples</a>
+          <a href="index.html">Boîte à rythmes 808</a>
+          <a href="samples.html">Découpeur audio</a>
+          <a href="effects.html">Effets audio</a>
+        </nav>
+      </header>
+      <main id="contenu" tabindex="-1">
+        <div class="game-header">
+          <div class="brand">
+            <div class="mark" aria-hidden="true">◉</div>
+            <div>
+              <p class="eyebrow">Atelier musical · 01</p>
+              <h1>Groove Mystère</h1>
+            </div>
+          </div>
+          <div class="level">
+            Jeu <strong id="gameModeTitle">Simon musical</strong>
+          </div>
+        </div>
+        <section class="game" aria-label="Jeu de mémoire musicale">
+          <div class="topline">
+            <div class="round" id="roundLabel">
+              Meilleure suite : <strong>0</strong> sons
+            </div>
+            <div class="game-actions">
+              <button id="start" class="primary" type="button">
+                Lancer la partie</button
+              ><button id="stopGame" type="button" disabled>
+                Arrêter la partie
+              </button>
+            </div>
+          </div>
+          <div class="mode-row">
+            <span class="mode-label">Choisis le jeu</span>
+            <div class="mode-switch" role="group" aria-label="Mode de jeu">
+              <button
+                id="simonGame"
+                class="mode-choice"
+                type="button"
+                aria-pressed="true"
+              >
+                Séquence Simon
+              </button>
+              <button
+                id="patternGame"
+                class="mode-choice"
+                type="button"
+                aria-pressed="false"
+              >
+                Motif mystère
+              </button>
+            </div>
+          </div>
+          <div class="mode-row">
+            <span class="mode-label">Choisis tes sons</span>
+            <div class="mode-switch" role="group" aria-label="Mode sonore">
+              <button
+                id="drumMode"
+                class="mode-choice"
+                type="button"
+                aria-pressed="true"
+              >
+                Percussions
+              </button>
+              <button
+                id="noteMode"
+                class="mode-choice"
+                type="button"
+                aria-pressed="false"
+              >
+                Notes
+              </button>
+            </div>
+          </div>
+          <div class="status" id="status" aria-live="polite">
+            Écoute la séquence, puis répète-la dans le même ordre.
+          </div>
+          <div class="pads" role="group" aria-label="Pads de percussion">
+            <button
+              class="pad"
+              data-pad="0"
+              type="button"
+              aria-label="Grosse caisse"
+            >
+              <span class="glyph" aria-hidden="true">●</span
+              ><span class="name">Grosse caisse</span>
+            </button>
+            <button
+              class="pad"
+              data-pad="1"
+              type="button"
+              aria-label="Caisse claire"
+            >
+              <span class="glyph" aria-hidden="true">✳</span
+              ><span class="name">Caisse claire</span>
+            </button>
+            <button
+              class="pad"
+              data-pad="2"
+              type="button"
+              aria-label="Charleston"
+            >
+              <span class="glyph" aria-hidden="true">◌</span
+              ><span class="name">Charleston</span>
+            </button>
+            <button class="pad" data-pad="3" type="button" aria-label="Clap">
+              <span class="glyph" aria-hidden="true">✦</span
+              ><span class="name">Clap</span>
+            </button>
+            <div class="center-hub" aria-hidden="true">
+              <strong>GROOVE</strong><small>MYSTÈRE</small>
+            </div>
+          </div>
+          <p class="howto" id="howto">
+            Chaque tour ajoute un coup. Une erreur termine la partie.
+          </p>
+        </section>
+        <p class="footer">
+          Deux façons de jouer · notes ou percussions · à toi de garder le
+          rythme.
+        </p>
+      </main>
+      <footer class="lab-footer">
+        <p>
+          <strong>Pour écouter :</strong> commence à volume modéré. Un casque
+          est conseillé. Clique sur le bouton de lecture de l’atelier pour
+          démarrer le son.
+        </p>
+        <a href="https://github.com/IzzyAsHTn/beat-lab-808"
+          >Code source sur GitHub</a
+        >
+        <a href="ateliers.html"
+          >Tous les ateliers <span aria-hidden="true">→</span></a
+        >
+      </footer>
     </div>
-    <section class="game" aria-label="Jeu de mémoire musicale">
-      <div class="topline">
-        <div class="round" id="roundLabel">Meilleure suite : <strong>0</strong> sons</div>
-        <button id="start" class="primary" type="button">Lancer la partie</button>
-      </div>
-      <div class="mode-row">
-        <span class="mode-label">Choisis le jeu</span>
-        <div class="mode-switch" role="group" aria-label="Mode de jeu">
-          <button id="simonGame" class="mode-choice" type="button" aria-pressed="true">Séquence Simon</button>
-          <button id="patternGame" class="mode-choice" type="button" aria-pressed="false">Motif mystère</button>
-        </div>
-      </div>
-      <div class="mode-row">
-        <span class="mode-label">Choisis tes sons</span>
-        <div class="mode-switch" role="group" aria-label="Mode sonore">
-          <button id="drumMode" class="mode-choice" type="button" aria-pressed="true">Percussions</button>
-          <button id="noteMode" class="mode-choice" type="button" aria-pressed="false">Notes</button>
-        </div>
-      </div>
-      <div class="status" id="status" aria-live="polite">Écoute la séquence, puis répète-la dans le même ordre.</div>
-      <div class="pads" role="group" aria-label="Pads de percussion">
-        <button class="pad" data-pad="0" type="button" aria-label="Grosse caisse"><span class="glyph" aria-hidden="true">●</span><span class="name">Grosse caisse</span></button>
-        <button class="pad" data-pad="1" type="button" aria-label="Caisse claire"><span class="glyph" aria-hidden="true">✳</span><span class="name">Caisse claire</span></button>
-        <button class="pad" data-pad="2" type="button" aria-label="Charleston"><span class="glyph" aria-hidden="true">◌</span><span class="name">Charleston</span></button>
-        <button class="pad" data-pad="3" type="button" aria-label="Clap"><span class="glyph" aria-hidden="true">✦</span><span class="name">Clap</span></button>
-        <div class="center-hub" aria-hidden="true"><strong>GROOVE</strong><small>MYSTÈRE</small></div>
-      </div>
-      <p class="howto" id="howto">Chaque tour ajoute un coup. Une erreur termine la partie.</p>
-    </section>
-    <p class="footer">Deux façons de jouer · notes ou percussions · à toi de garder le rythme.</p>
-  </main>
-<footer class="lab-footer">
-      <p><strong>Pour écouter :</strong> commence à volume modéré. Un casque est conseillé. Clique sur le bouton de lecture de l’atelier pour démarrer le son.</p><a href="https://github.com/IzzyAsHTn/beat-lab-808">Code source sur GitHub</a>
-      <a href="ateliers.html">Tous les ateliers <span aria-hidden="true">→</span></a>
-    </footer>
-</div>
-  <script src="groove-mystere.js?v=dbfb007ee8f1"></script>
-</body>
+    <script src="lab-core.js?v=b802578c1247"></script>
+    <script src="groove-mystere.js?v=df96056e21ce"></script>
+  </body>
 </html>
