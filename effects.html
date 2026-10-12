@@ -92,7 +92,8 @@
               type="range"
               min="500"
               max="18000"
-              value="18000"><output id="cutv" for="cut">18 kHz</output>
+              value="18000"
+              aria-describedby="cutv"><output id="cutv" for="cut">18 kHz</output>
           </div>
           <div class="effectrow">
             <label for="drive">Saturation</label
@@ -101,11 +102,12 @@
               type="range"
               min="0"
               max="100"
-              value="0"><output id="drivev" for="drive">0%</output>
+              value="0"
+              aria-describedby="drivev"><output id="drivev" for="drive">0%</output>
           </div>
           <div class="effectrow">
             <label for="delay">Écho</label
-            ><input id="delay" type="range" min="0" max="70" value="0"><output
+            ><input id="delay" type="range" min="0" max="70" value="0" aria-describedby="delayv"><output
               id="delayv"
               for="delay"
               >0%</output
@@ -118,7 +120,8 @@
               type="range"
               min="0"
               max="70"
-              value="0"><output id="reverbv" for="reverb">0%</output>
+              value="0"
+              aria-describedby="reverbv"><output id="reverbv" for="reverb">0%</output>
           </div>
           <div class="row render-controls">
             <button type="button" id="preview" class="btn" disabled>
@@ -167,6 +170,6 @@
       </footer>
     </div>
     <script src="lab-core.js?v=9a82659e4759"></script>
-    <script src="effects.js?v=0776e9c1ddd5"></script>
+    <script src="effects.js?v=f65f77965753"></script>
   </body>
 </html>

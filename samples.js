@@ -199,6 +199,13 @@
     position.textContent = timeText(selectionStart);
     draw();
   }
+  function releaseCurrentAudio() {
+    media.pause();
+    media.removeAttribute("src");
+    media.load();
+    buffer = null;
+    waveBase = waveAccent = null;
+  }
   async function loadFile(file) {
     if (!file) return;
     try {
@@ -238,6 +245,7 @@
         probe.load();
       }
       if (!fileLoad.current(token)) return;
+      releaseCurrentAudio();
       if (fileUrl) URL.revokeObjectURL(fileUrl);
       fileUrl = pendingUrl;
       pendingUrl = null;

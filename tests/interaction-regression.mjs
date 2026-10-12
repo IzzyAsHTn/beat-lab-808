@@ -410,6 +410,117 @@ await test("Effects render reports when its browser cannot cancel offline work",
   assert.deepEqual(JSON.parse(JSON.stringify(capabilities)), [[false, "unsupported"]]);
   assert.equal(result.buffer.id, "rendered");
 });
+await test("Effects sliders associate their outputs and expose formatted accessible values", async () => {
+  const html = fs.readFileSync(path.join(root, "effects.html"), "utf8");
+  for (const [id, text] of [
+    ["cut", "18 kHz"],
+    ["drive", "0%"],
+    ["delay", "0%"],
+    ["reverb", "0%"],
+  ]) {
+    const input = html.match(new RegExp(`<input[^>]*id="${id}"[^>]*>`))?.[0];
+    assert.ok(input, `${id} input exists`);
+    assert.match(input, new RegExp(`aria-describedby="${id}v"`));
+    assert.match(html, new RegExp(`<output[^>]*id="${id}v"[^>]*for="${id}"`));
+    const output = { textContent: "" };
+    const control = {
+      id,
+      value: id === "cut" ? "18000" : "0",
+      attributes: {},
+      setAttribute(name, value) { this.attributes[name] = value; },
+    };
+    bind(
+      { control, $: () => output, formatters: {
+        cut: () => "18 kHz",
+        drive: (value) => value + "%",
+        delay: (value) => value + "%",
+        reverb: (value) => value + "%",
+      } },
+      fn(source("effects"), "updateControlValue") + ";updateControlValue(control);",
+    );
+    assert.equal(output.textContent, text);
+    assert.equal(control.attributes["aria-valuetext"], text);
+  }
+});
+await test("Groove Mystere routes every synthesized voice through one master limiter", async () => {
+  const edges = [];
+  const audioParam = () => ({
+    value: 0,
+    setValueAtTime(value) { this.value = value; },
+    exponentialRampToValueAtTime(value) { this.value = value; },
+  });
+  const makeNode = (name) => ({
+    name,
+    connect(next) { edges.push([this, next]); return next; },
+    start() {},
+    stop() {},
+    frequency: audioParam(),
+    gain: audioParam(),
+    Q: audioParam(),
+    threshold: audioParam(),
+    knee: audioParam(),
+    ratio: audioParam(),
+    attack: audioParam(),
+    release: audioParam(),
+  });
+  const destination = { name: "destination" };
+  const context = {
+    currentTime: 1,
+    sampleRate: 44100,
+    destination,
+    createDynamicsCompressor: () => makeNode("limiter"),
+    createOscillator: () => makeNode("oscillator"),
+    createBufferSource: () => makeNode("source"),
+    createBiquadFilter: () => makeNode("filter"),
+    createGain: () => makeNode("gain"),
+    createBuffer: (_channels, length) => ({
+      getChannelData: () => new Float32Array(length),
+    }),
+  };
+  const scope = {
+    context,
+    limiterContext: undefined,
+    masterLimiter: undefined,
+    mode: "drums",
+    noteFrequencies: [196, 261.63, 329.63, 392],
+    trackSound: (node) => node,
+  };
+  bind(
+    scope,
+    fn(game, "getMasterLimiter") + fn(game, "scheduleSound") +
+      ";for(let id=0;id<4;id++)scheduleSound(id,context);mode='notes';for(let id=0;id<4;id++)scheduleSound(id,context);",
+  );
+  const limiter = scope.masterLimiter;
+  assert.equal(limiter.threshold.value, -1);
+  assert.equal(limiter.knee.value, 0);
+  assert.equal(limiter.ratio.value, 20);
+  assert.equal(limiter.attack.value, 0.003);
+  assert.equal(limiter.release.value, 0.12);
+  assert.deepEqual(edges.filter(([, target]) => target === destination), [[limiter, destination]]);
+  assert.ok(edges.some(([, target]) => target === limiter));
+});
+await test("Groove Mystere skips pad flashes when reduced motion is requested", async () => {
+  for (const reduce of [true, false]) {
+    const changes = [],
+      sounds = [],
+      pad = { classList: {
+        add: (name) => changes.push("add " + name),
+        remove: (name) => changes.push("remove " + name),
+      } };
+    const scope = {
+      window: { matchMedia: () => ({ matches: reduce }) },
+      session: { version: () => 1, current: () => true },
+      pads: [pad],
+      flashVersions: [0],
+      wait: async () => {},
+      makeSound: (id) => sounds.push(id),
+    };
+    bind(scope, fn(game, "prefersReducedMotion") + "async " + fn(game, "flash") + ";flash(0);");
+    await tick();
+    assert.deepEqual(changes, reduce ? [] : ["add is-lit", "remove is-lit"]);
+    assert.deepEqual(sounds, [0]);
+  }
+});
 await test("Oversized files are refused before reading or decoding", async () => {
   core.checkAudioFile({ size: 50_000_000 });
   assert.throws(() => core.checkAudioFile({ size: 50_000_001 }), /50 Mo/);
@@ -536,7 +647,7 @@ await test("Cutter imports commit only the latest decoded file", async () => {
       createObjectURL: (f) => f.name,
       revokeObjectURL: (u) => revoked.push(u),
     },
-    media: { load() {}, removeAttribute() {} },
+    media: { pause() {}, load() {}, removeAttribute() {} },
     startInput: {},
     endInput: {},
     filename: {},
@@ -546,7 +657,7 @@ await test("Cutter imports commit only the latest decoded file", async () => {
     timeText: (x) => String(x),
     draw() {},
   };
-  bind(s, "async " + fn(cut, "loadFile"));
+  bind(s, fn(cut, "releaseCurrentAudio") + "async " + fn(cut, "loadFile"));
   const bytes = (id) => ({
     id,
     slice() {
@@ -584,7 +695,7 @@ await test("A failed cutter import keeps the previously loaded file", async () =
     meta: { textContent: "old metadata" },
     media: {},
   };
-  bind(s, "async " + fn(cut, "loadFile"));
+  bind(s, fn(cut, "releaseCurrentAudio") + "async " + fn(cut, "loadFile"));
   await s.loadFile(file("too-long"));
   assert.equal(s.buffer.id, "previous");
   assert.equal(s.fileUrl, "previous.wav");
@@ -607,7 +718,7 @@ await test("Cutter rejects decoded audio beyond its five-minute cap", async () =
       decodeAudioData: async () => ({ duration: 300.01 }),
     }),
   };
-  bind(s, "async " + fn(cut, "loadFile"));
+  bind(s, fn(cut, "releaseCurrentAudio") + "async " + fn(cut, "loadFile"));
   await s.loadFile(
     file("decoded-too-long", async () => ({ slice() { return this; } })),
   );
@@ -666,7 +777,7 @@ await test("Cutter metadata finishing late cannot replace the current file; its 
       createObjectURL: (f) => f.name,
       revokeObjectURL: (u) => revoked.push(u),
     },
-    media: { load() {}, removeAttribute() {} },
+    media: { pause() {}, load() {}, removeAttribute() {} },
     startInput: {},
     endInput: {},
     filename: {},
@@ -676,7 +787,7 @@ await test("Cutter metadata finishing late cannot replace the current file; its 
     timeText: (x) => String(x),
     draw() {},
   };
-  bind(s, "async " + fn(cut, "loadFile"));
+  bind(s, fn(cut, "releaseCurrentAudio") + "async " + fn(cut, "loadFile"));
   const a = s.loadFile(file("A", async () => bytes("A")));
   await tick();
   await s.loadFile(file("B", async () => bytes("B")));
@@ -685,6 +796,53 @@ await test("Cutter metadata finishing late cannot replace the current file; its 
   assert.equal(s.filename.textContent, "B.wav");
   assert.equal(s.fileUrl, "B.wav");
   assert.deepEqual(revoked, ["A.wav"]);
+});
+await test("Replacing a cutter file detaches the old media source and releases its buffer reference", async () => {
+  const mediaCalls = [],
+    revoked = [];
+  class AudioProbe {
+    constructor() { this.events = {}; }
+    addEventListener(name, callback) { this.events[name] = callback; }
+    set src(value) { this.url = value; }
+    removeAttribute() { this.url = null; }
+    pause() {}
+    load() { queueMicrotask(() => this.events.loadedmetadata?.()); }
+  }
+  const s = {
+    window: { BeatLabCore: testCore },
+    fileLoad: core.latestOperation(),
+    Audio: AudioProbe,
+    stop() {},
+    enable() {},
+    message: {},
+    ensureAudio: () => ({
+      decodeAudioData: async () => ({ duration: 1, numberOfChannels: 2, sampleRate: 48000 }),
+    }),
+    buffer: { id: "old-buffer" },
+    waveBase: { id: "old-wave" },
+    waveAccent: { id: "old-accent" },
+    fileUrl: "old.wav",
+    URL: {
+      createObjectURL: (f) => f.name,
+      revokeObjectURL: (url) => revoked.push(url),
+    },
+    media: {
+      pause() { mediaCalls.push("pause"); },
+      removeAttribute() { mediaCalls.push("remove src"); },
+      load() { mediaCalls.push("load"); },
+      set src(value) { mediaCalls.push("src " + value); },
+    },
+    startInput: {}, endInput: {}, filename: {}, meta: {}, fitCanvas() {},
+    setSelection() {}, timeText: (x) => String(x), draw() {},
+  };
+  bind(s, fn(cut, "releaseCurrentAudio") + "async " + fn(cut, "loadFile"));
+  await s.loadFile(file("new", async () => ({ slice() { return this; } })));
+  assert.equal(s.buffer.duration, 1);
+  assert.equal(s.waveBase, null);
+  assert.equal(s.waveAccent, null);
+  assert.equal(s.fileUrl, "new.wav");
+  assert.deepEqual(mediaCalls.slice(0, 3), ["pause", "remove src", "load"]);
+  assert.deepEqual(revoked, ["old.wav"]);
 });
 await test("A sample removal runs after an in-flight write and blocks imports until finished", async () => {
   const s = trackFixture(),

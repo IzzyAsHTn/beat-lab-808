@@ -172,11 +172,15 @@
     delay: (value) => value + "%",
     reverb: (value) => value + "%",
   };
-  controls.forEach((control) =>
+  function updateControlValue(control) {
+    const valueText = formatters[control.id](control.value);
+    $("#" + control.id + "v").textContent = valueText;
+    control.setAttribute("aria-valuetext", valueText);
+  }
+  controls.forEach((control) => {
+    updateControlValue(control);
     control.addEventListener("input", () => {
-      $("#" + control.id + "v").textContent = formatters[control.id](
-        control.value,
-      );
+      updateControlValue(control);
       if (renderUrl || renderedBuffer) {
         clearRender(
           "Paramètres modifiés · crée un nouveau rendu pour écouter ou télécharger les effets.",
@@ -186,8 +190,8 @@
         updatePreview();
         setStatus("Préécoute en boucle · effets ajustés en direct.");
       }
-    }),
-  );
+    });
+  });
   file.addEventListener("change", async () => {
     const selected = file.files && file.files[0];
     if (selected) {

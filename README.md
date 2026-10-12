@@ -19,6 +19,14 @@ Le séquenceur enregistre automatiquement les motifs, réglages de mixage (volum
 
 `clap-real.wav` est conservé dans le dépôt comme ancienne ressource, mais n'est plus chargé ni utilisé par les kits. Le clap Industriel utilise désormais le fichier audio fourni pour ce projet, `industrial-clap.wav`.
 
+## Licences et attribution audio
+
+Le code du projet est publié sous licence MIT ; voir [`LICENSE`](LICENSE). Cette licence ne couvre pas les fichiers audio. Les métadonnées internes de `clap-real.wav` portent la mention « Copyright - Marc Van Bork 2006-2007 » ; le dépôt ne précise ni sa source d'origine ni ses conditions de licence. `industrial-clap.wav` ne contient pas de métadonnée de créateur ou de licence exploitable. La provenance et les conditions de réutilisation de ces deux sons restent à confirmer. Ne présume pas qu'ils sont librement redistribuables.
+
+## Compatibilité navigateurs
+
+Le site cible les versions récentes de Chrome, Edge, Firefox et Safari sur ordinateur et mobile. Il requiert les API Web Audio pour l’écoute et le traitement, `OfflineAudioContext` pour le rendu des Effets, `IndexedDB` pour les samples du séquenceur, ainsi que `localStorage` pour les réglages et scores. La lecture et le décodage des formats audio dépendent du navigateur et du système. L’annulation du rendu hors ligne est proposée uniquement lorsque le navigateur accepte les suspensions de rendu utilisées par l’application. Ce dépôt ne contient pas de matrice de tests automatisés multi-navigateurs ; vérifie les formats importés et les sorties audio dans le navigateur visé. Les API principales citées sont largement disponibles dans les navigateurs modernes ([AudioContext](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext), [OfflineAudioContext](https://developer.mozilla.org/en-US/docs/Web/API/OfflineAudioContext), [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)).
+
 ## Mise à jour sur GitHub Pages
 
 Les six pages partagent la marque, les noms d’ateliers, la navigation et les styles de focus de `lab-shared.css`. Le bandeau, le contenu principal et le pied de page sont des repères distincts ; le lien d’évitement donne le focus à `main#contenu`. La page d’accueil utilise aussi `ateliers.css`. Aucun outil de compilation n’est nécessaire.
