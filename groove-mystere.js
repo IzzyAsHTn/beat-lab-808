@@ -33,8 +33,33 @@ const padSets = {
   ],
 };
 const noteFrequencies = [196.0, 261.63, 329.63, 392.0];
-const bestByMode = { drums: 0, notes: 0 };
-const bestPatternsByMode = { drums: 0, notes: 0 };
+const SCORE_KEY = "beat-lab-groove-scores-v1";
+function readScores() {
+  const scores = {
+    bestByMode: { drums: 0, notes: 0 },
+    bestPatternsByMode: { drums: 0, notes: 0 },
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem(SCORE_KEY) || "null");
+    for (const key of Object.keys(scores))
+      for (const gameMode of ["drums", "notes"])
+        scores[key][gameMode] = Math.max(
+          0,
+          Math.floor(Number(saved?.[key]?.[gameMode]) || 0),
+        );
+  } catch (error) {}
+  return scores;
+}
+const scores = readScores();
+const bestByMode = scores.bestByMode;
+const bestPatternsByMode = scores.bestPatternsByMode;
+function saveScores() {
+  try {
+    localStorage.setItem(SCORE_KEY, JSON.stringify({ bestByMode, bestPatternsByMode }));
+  } catch (error) {
+    updateStatus("Meilleur score conservé pour cette session, mais le navigateur ne permet pas son enregistrement.");
+  }
+}
 let mode = "drums";
 let gameMode = "simon";
 let audioContext;
@@ -79,7 +104,7 @@ function renderMode() {
     const pad = pads[id];
     pad.querySelector(".glyph").textContent = info.glyph;
     pad.querySelector(".name").textContent = info.name;
-    pad.setAttribute("aria-label", info.aria);
+    pad.setAttribute("aria-label", info.aria + " · raccourci clavier " + (id + 1));
   });
   soundModeButtons.forEach((button) =>
     button.setAttribute("aria-pressed", String(button.dataset.mode === mode)),
@@ -455,10 +480,12 @@ pads.forEach((pad, id) =>
         bestPatternsByMode[mode],
         completedPatterns,
       );
+      saveScores();
       updateStatus("Motif retrouvé ! Un nouveau motif arrive…");
       tempo = Math.max(360, 630 - Math.floor(completedPatterns / 3) * 40);
     } else {
       bestByMode[mode] = Math.max(bestByMode[mode], sequence.length);
+      saveScores();
       updateStatus("Bien joué ! Le groove s'allonge…");
       tempo = Math.max(300, 630 - Math.floor(sequence.length / 4) * 45);
     }
@@ -508,3 +535,18 @@ startButton.addEventListener("click", async (event) => {
   beginRound(token);
 });
 renderMode();
+
+document.addEventListener("keydown", (event) => {
+  if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+  const target = event.target;
+  if (
+    target instanceof Element &&
+    target.closest("input, textarea, select, [contenteditable='true']")
+  )
+    return;
+  if (!/^[1-4]$/.test(event.key)) return;
+  const pad = pads[Number(event.key) - 1];
+  if (!pad || pad.disabled) return;
+  event.preventDefault();
+  pad.click();
+});

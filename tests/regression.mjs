@@ -10,9 +10,10 @@ const root = path.resolve(
 );
 const core = createRequire(import.meta.url)(path.join(root, "lab-core.js"));
 await (async () => {
+  let audioDuration = 121;
   class AudioProbe {
     constructor() {
-      this.duration = 121;
+      this.duration = audioDuration;
     }
     load() {
       if (this.onloadedmetadata)
@@ -38,7 +39,21 @@ await (async () => {
     window.BeatLabCore.checkAudioFileDuration({}),
     /limite est de 2 minutes/,
   );
-  assert.deepEqual(revoked, ["blob:test"]);
+  audioDuration = 120;
+  assert.equal(await window.BeatLabCore.checkAudioFileDuration({}), 120);
+  audioDuration = 120.01;
+  await assert.rejects(
+    window.BeatLabCore.checkAudioFileDuration({}),
+    /limite est de 2 minutes/,
+  );
+  audioDuration = 300;
+  assert.equal(await window.BeatLabCore.checkAudioFileDuration({}, 300), 300);
+  audioDuration = 300.01;
+  await assert.rejects(
+    window.BeatLabCore.checkAudioFileDuration({}, 300),
+    /limite est de 5 minutes/,
+  );
+  assert.equal(revoked.length, 5);
 })();
 function program(name) {
   const external = path.join(root, name + ".js");
@@ -73,25 +88,88 @@ function fn(source, name) {
 }
 const drums = program("index"),
   cutter = program("samples");
+assert.equal(
+  vm.runInNewContext(fn(cutter, "normalizationGainForPeak") + ";normalizationGainForPeak(0.25);"),
+  0.89125094 / 0.25,
+);
+assert.equal(
+  vm.runInNewContext(fn(cutter, "normalizationGainForPeak") + ";normalizationGainForPeak(0);"),
+  1,
+);
 const sequencerSource = program("sequencer"),
   fxStart = sequencerSource.indexOf("const FX_RANGES ="),
   fxEnd = sequencerSource.indexOf("const tracks = defs.map", fxStart),
   restoreFx = fn(sequencerSource, "restoreFx"),
-  restoredFx = vm.runInNewContext(
+  lowerBoundsFx = vm.runInNewContext(
     sequencerSource.slice(fxStart, fxEnd) +
       restoreFx +
       "; restoreFx(target, saved); JSON.stringify(target);",
     {
       target: { filter: 18000, drive: 0, delay: 0, reverb: 0 },
-      saved: { filter: 999999, drive: -80, delay: 1200, reverb: 35 },
+      saved: { filter: -500, drive: -80, delay: -20, reverb: "invalid" },
     },
   );
-assert.deepEqual(JSON.parse(restoredFx), {
-  filter: 18000,
+assert.deepEqual(JSON.parse(lowerBoundsFx), {
+  filter: 500,
   drive: 0,
-  delay: 100,
-  reverb: 35,
+  delay: 0,
+  reverb: 0,
 });
+const upperBoundsFx = vm.runInNewContext(
+  sequencerSource.slice(fxStart, fxEnd) +
+    restoreFx +
+    "; restoreFx(target, saved); JSON.stringify(target);",
+  {
+    target: { filter: 500, drive: 0, delay: 0, reverb: 0 },
+    saved: { filter: 999999, drive: 500, delay: 1200, reverb: 150 },
+  },
+);
+assert.deepEqual(JSON.parse(upperBoundsFx), {
+  filter: 18000,
+  drive: 100,
+  delay: 100,
+  reverb: 100,
+});
+const wavBlobs = [];
+let wavDownload = "";
+const wavScope = {
+  buffer: {
+    sampleRate: 8000,
+    length: 8,
+    numberOfChannels: 1,
+    getChannelData: () => new Float32Array([-0.25, 0.5, 0, 0, 0, 0, 0, 0]),
+  },
+  selectionStart: 0,
+  selectionEnd: 2 / 8000,
+  filename: { textContent: "test.wav" },
+  message: { textContent: "" },
+  Blob,
+  URL: {
+    createObjectURL: (blob) => (wavBlobs.push(blob), "blob:wav"),
+    revokeObjectURL() {},
+  },
+  document: {
+    createElement: () => ({
+      click() {},
+      set download(value) { wavDownload = value; },
+    }),
+  },
+  setTimeout(callback) { callback(); },
+};
+vm.runInNewContext(
+  fn(cutter, "normalizationGainForPeak") +
+    fn(cutter, "exportWav") +
+    ";exportWav();",
+  wavScope,
+);
+const wavData = new DataView(await wavBlobs[0].arrayBuffer());
+assert.equal(String.fromCharCode(...[0, 1, 2, 3].map((i) => wavData.getUint8(i))), "RIFF");
+assert.equal(wavData.getUint16(22, true), 1, "WAV should contain one channel");
+assert.equal(wavData.getUint32(24, true), 8000, "WAV sample rate");
+assert.equal(wavData.getUint32(40, true), 4, "WAV selection length");
+assert.ok(Math.abs(wavData.getInt16(44, true) / 32768 + 0.44562547) < 0.0001);
+assert.ok(Math.abs(wavData.getInt16(46, true) / 32767 - 0.89125094) < 0.0001);
+assert.match(wavDownload, /test-0\.00s-0\.00s\.wav/);
 const timing = [];
 for (const bpm of [60, 96, 100, 160])
   for (const swing of [false, true]) {

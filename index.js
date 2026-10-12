@@ -346,13 +346,11 @@
     if (playing && kit.value === "industrial" && !industrialClapBuffer) {
       status.textContent = "Chargement du clap…";
       loadIndustrialClap()
-        .then(() => {
+        .then((buffer) => {
           if (playing && kit.value === "industrial")
-            status.textContent = "En lecture";
-        })
-        .catch(() => {
-          if (playing && kit.value === "industrial")
-            status.textContent = "Clap industriel indisponible";
+            status.textContent = buffer
+              ? "En lecture"
+              : "Clap de secours synthétique actif · fichier industriel indisponible";
         });
     }
   });
@@ -429,10 +427,14 @@
           return response.arrayBuffer();
         })
         .then((data) => ctx.decodeAudioData(data))
-        .then((buffer) => (industrialClapBuffer = buffer))
+        .then((buffer) => {
+          industrialClapBuffer = buffer;
+          return buffer;
+        })
         .catch((error) => {
           industrialClapBufferPromise = null;
-          throw error;
+          console.warn("Clap industriel indisponible, utilisation du son synthétique.", error);
+          return null;
         });
     return industrialClapBufferPromise;
   }
@@ -708,9 +710,9 @@
       else if (track.id === "highTom") tom(t, true);
       else if (track.id === "cowbell") cowbell(t);
       else if (track.id === "clap") {
-        if (kit.value === "industrial") {
-          if (industrialClapBuffer) industrialClap(t, track);
-        } else classic808Clap(t, track);
+        if (kit.value === "industrial" && industrialClapBuffer)
+          industrialClap(t, track);
+        else classic808Clap(t, track);
       } else noiseHit(t, track.id);
     });
     const delay = Math.max(0, (t - ctx.currentTime) * 1000);
@@ -755,13 +757,13 @@
       nextTime = ctx.currentTime + 0.05;
       timer = setInterval(scheduler, interval);
       playButton.textContent = "■ Arrêter";
-      status.textContent = "En lecture";
-    } catch (e) {
-      if (token !== startVersion) return;
       status.textContent =
         kit.value === "industrial" && !industrialClapBuffer
-          ? "Clap industriel indisponible"
-          : "Audio indisponible";
+          ? "En lecture · clap synthétique de secours"
+          : "En lecture";
+    } catch (e) {
+      if (token !== startVersion) return;
+      status.textContent = "Audio indisponible";
       playButton.textContent = "▶ Jouer";
     } finally {
       if (token === startVersion) {
