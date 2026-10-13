@@ -27,7 +27,7 @@ Le site cible les versions récentes de Chrome, Edge, Firefox et Safari sur ordi
 
 Les six pages partagent la marque, les noms d’ateliers, la navigation et les styles de focus de `lab-shared.css`. Le bandeau, le contenu principal et le pied de page sont des repères distincts ; le lien d’évitement donne le focus à `main#contenu`. La page d’accueil utilise aussi `ateliers.css`. Aucun outil de compilation n’est nécessaire.
 
-Pour une installation manuelle, copie tous les fichiers HTML, CSS et JS du site ainsi que `industrial-clap.wav`, `favicon.svg`, `favicon.png`, `partage.svg` et `partage.png` à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Le fichier audio fourni est l’original, inchangé.
+Pour une installation manuelle, copie tous les fichiers HTML, CSS et JS du site, `404.html`, `robots.txt`, `sitemap.xml`, `industrial-clap.wav`, `favicon.svg`, `favicon.png`, `partage.svg` et `partage.png` à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Le fichier audio fourni est l’original, inchangé.
 
 Les six pages déclarent la même favicon (SVG avec PNG de secours), un titre et une description Open Graph propres à chaque atelier, leur URL publique et une image de partage commune `partage.png` de 1200 × 630 px. `partage.svg` conserve sa source vectorielle. Si le site change de domaine ou de chemin, mets à jour les URL absolues `og:url` et `og:image` dans les six pages. Les images PNG sont fournies : aucune conversion n’est nécessaire pour publier le site.
 
@@ -38,7 +38,7 @@ Pour vérifier localement : `python3 -m http.server 8080`, puis ouvre `http://lo
 
 Le tempo de la boîte à rythmes respecte la valeur affichée avec ou sans swing. Les indicateurs planifiés sont annulés à l’arrêt et les erreurs de sauvegarde sont affichées. Le test de sortie du découpeur respecte son réglage de volume.
 
-Les grilles proposent une seule case dans l’ordre de tabulation : flèches pour changer de pas ou de piste, Début/Fin pour les extrémités de la ligne, Espace ou Entrée pour activer une case. Elles conservent la présentation horizontale d’origine : commandes à gauche, pas alignés à droite. Sur petit écran, la grille défile horizontalement ; les noms des pistes restent repérables pendant le défilement et les en-têtes de pas restent affichés. Jusqu’à 650 px, `mobile-compact.css` réduit les marges et les espaces de ces deux outils. Les boutons Mute/Solo mesurent 40 × 40 px dans le séquenceur et 38 × 38 px dans la 808, avec des libellés à 12 px ; les commandes d’import et d’effacement conservent leurs dimensions. Import et retrait de sample sont réunis sur une ligne, avec le nom complet en dessous. La présentation ordinateur reste inchangée. Les bordures contrastées et les focus visibles sont conservés.
+Les grilles proposent une seule case dans l’ordre de tabulation : flèches pour changer de pas ou de piste, PageUp/PageDown pour avancer ou reculer de quatre pas, Début/Fin pour les extrémités de la ligne, Espace ou Entrée pour activer une case. Les cases annoncent la piste, leur position sur la ligne et leur état ; le séquenceur annonce aussi le changement de longueur. Les grilles incomplètes ou vides ne font pas planter la navigation. Elles conservent la présentation horizontale d’origine : commandes à gauche, pas alignés à droite. Sur petit écran, la grille défile horizontalement ; les noms des pistes restent repérables pendant le défilement et les en-têtes de pas restent affichés. Jusqu’à 650 px, `mobile-compact.css` réduit les marges et les espaces de ces deux outils. Les boutons Mute/Solo mesurent 40 × 40 px dans le séquenceur et 38 × 38 px dans la 808, avec des libellés à 12 px ; les commandes d’import et d’effacement conservent leurs dimensions. Import et retrait de sample sont réunis sur une ligne, avec le nom complet en dessous. La présentation ordinateur reste inchangée. Les bordures contrastées et les focus visibles sont conservés.
 
 Les styles et scripts des cinq ateliers sont dans des fichiers séparés. `lab-tools.css` contient les adaptations des deux grilles ; `lab-grid.js` contient leur navigation au clavier. Les URL CSS et JS portent une version dérivée de leur contenu : actualiser cette version après toute modification du fichier concerné.
 
@@ -51,7 +51,7 @@ node tests/regression.mjs
 node tests/interaction-regression.mjs
 ```
 
-Ces tests exécutent les fonctions du site avec une horloge, un stockage et un lecteur audio simulés. Ils couvrent les limites d’import (50 Mo, 2 ou 5 minutes selon l’atelier), le clamp des réglages restaurés, la structure et les échantillons PCM du WAV exporté, le tempo, l’annulation des indicateurs, les erreurs de sauvegarde et les interactions clavier. Les essais d’écoute et d’affichage restent à compléter dans un navigateur.
+Ces tests exécutent les fonctions du site avec une horloge, un stockage et un lecteur audio simulés. Ils couvrent les limites d’import (50 Mo, 2 ou 5 minutes selon l’atelier), le clamp des réglages restaurés, la structure et les échantillons PCM du WAV exporté, le tempo, l’annulation des indicateurs, les erreurs de sauvegarde, les grilles vides ou irrégulières, leurs raccourcis clavier, les URL canoniques et les fichiers de référencement. Les essais d’écoute, de focus et d’affichage restent à compléter dans un navigateur.
 
 ## Fiabilité des interactions
 

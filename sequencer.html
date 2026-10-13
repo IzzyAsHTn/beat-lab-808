@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="theme-color" content="#11110f">
     <title>Séquenceur de samples — Beat Lab 808</title>
-    <link rel="stylesheet" href="sequencer.css?v=fea50818dcf2">
+    <link rel="stylesheet" href="sequencer.css?v=b52d9481987b">
     <link rel="stylesheet" href="lab-shared.css?v=78c0830790e3">
-    <link rel="stylesheet" href="lab-tools.css?v=9d9a0ceddf17">
+    <link rel="stylesheet" href="lab-tools.css?v=33139933b00f">
     <link rel="stylesheet" href="mobile-compact.css?v=f1e3579c87da">
     <meta
       name="description"
@@ -38,6 +38,7 @@
       property="og:image:alt"
       content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
     <meta name="twitter:card" content="summary_large_image">
+      <link rel="canonical" href="https://izzyashtn.github.io/beat-lab-808/sequencer.html">
   </head>
   <body data-tool="sequencer">
     <a class="lab-skip" href="#contenu">Aller au contenu</a>
@@ -115,9 +116,16 @@
           </div>
           <p id="grid-help" class="grid-help">
             Grille : Tab pour entrer ou sortir, flèches pour te déplacer, Espace
-            ou Entrée pour activer un pas. Sur petit écran, fais défiler la
-            grille horizontalement pour atteindre les autres pas.
+            ou Entrée pour activer un pas. PageUp/PageDown déplacent de quatre
+            pas. Sur petit écran, fais défiler la grille horizontalement.
           </p>
+          <p
+            id="length-status"
+            class="sr-only"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></p>
           <section class="gridwrap" aria-label="Grille de samples">
             <div
               class="grid"
@@ -156,7 +164,7 @@
       </footer>
     </div>
     <script src="lab-core.js?v=9a82659e4759"></script>
-    <script src="lab-grid.js?v=72a405eca95b"></script>
-    <script src="sequencer.js?v=1ab7be8079e5"></script>
+    <script src="lab-grid.js?v=a1ba46b8a59e"></script>
+    <script src="sequencer.js?v=fbcaab2a7b0f"></script>
   </body>
 </html>

@@ -1,4 +1,15 @@
 /* Original horizontal grids, with readable controls and keyboard accessibility. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 body[data-tool] .grid-help,
 body[data-tool] .persist {
   color: #bcbcaf;
@@ -15,7 +26,7 @@ body[data-tool] .pad {
   border-color: #8d8d7d;
 }
 body[data-tool] .pad.on {
-  border-color: var(--tone);
+  border-color: var(--tone, var(--acid));
 }
 body[data-tool] .status {
   font-size: 13px;

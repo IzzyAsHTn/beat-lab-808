@@ -15,6 +15,7 @@ const testCore = {
 };
 const source = (name) => fs.readFileSync(path.join(root, name + ".js"), "utf8");
 const seq = source("sequencer"),
+  drums = source("index"),
   cut = source("samples"),
   game = source("groove-mystere");
 // Production handlers run unchanged with controlled completion order and audio/storage doubles.
@@ -63,6 +64,124 @@ function bind(scope, script) {
   vm.runInContext(script, scope);
   return scope;
 }
+function runCapturedHandler(sourceText, marker, scope) {
+  const start = sourceText.indexOf(marker);
+  assert.ok(start >= 0, `Missing handler: ${marker}`);
+  const captured = block(sourceText, start);
+  const body = captured.slice(captured.indexOf("{"));
+  bind(scope, `globalThis.capturedHandler = () => ${body};`);
+  scope.capturedHandler();
+  return scope;
+}
+await test("Both sequencers stop cleanly when the page becomes hidden", async () => {
+  for (const sourceText of [drums, seq]) {
+    const scope = {
+      document: { hidden: true },
+      playing: true,
+      starting: false,
+      status: { textContent: "En lecture" },
+      stopCalls: 0,
+    };
+    scope.stop = () => {
+      scope.stopCalls++;
+      scope.playing = false;
+    };
+    runCapturedHandler(
+      sourceText,
+      'document.addEventListener("visibilitychange", () => {',
+      scope,
+    );
+    assert.equal(scope.stopCalls, 1);
+    assert.match(scope.status.textContent, /arrière-plan/);
+    assert.equal(scope.playing, false);
+  }
+});
+await test("Both sequencers stop after an audio-context interruption", async () => {
+  for (const sourceText of [drums, seq]) {
+    const scope = {
+      ctx: { state: "suspended" },
+      playing: true,
+      starting: false,
+      status: { textContent: "En lecture" },
+      stopCalls: 0,
+    };
+    scope.stop = () => {
+      scope.stopCalls++;
+      scope.playing = false;
+    };
+    runCapturedHandler(sourceText, 'ctx.addEventListener("statechange", () => {', scope);
+    assert.equal(scope.stopCalls, 1);
+    assert.match(scope.status.textContent, /interruption audio/);
+    assert.equal(scope.playing, false);
+  }
+});
+await test("Clear and remove actions honor their confirmation dialog", async () => {
+  const steps = [true, true];
+  const drumScope = {
+    window: { confirm: () => false },
+    tracks: [{ steps }],
+    cells: [[...steps].map(() => ({ classList: { remove() {} }, setAttribute() {} }))],
+    status: { textContent: "" },
+    saves: 0,
+  };
+  drumScope.stepAccessibleLabel = () => "Kick, piste 1 sur 1, pas 1 sur 16, désactivé";
+  drumScope.savePattern = () => { drumScope.saves++; };
+  runCapturedHandler(
+    drums,
+    'document.querySelector("#clear").addEventListener("click", () => {',
+    drumScope,
+  );
+  assert.deepEqual(steps, [true, true]);
+  assert.equal(drumScope.saves, 0);
+  drumScope.window.confirm = () => true;
+  drumScope.capturedHandler();
+  assert.deepEqual(steps, [0, 0]);
+  assert.equal(drumScope.saves, 1);
+
+  const track = { buffer: { id: "sample" }, hasStoredSample: true, fileName: "loop.wav" };
+  let removals = 0;
+  const removeScope = {
+    track,
+    window: { confirm: () => false },
+    removeSample() { removals++; },
+  };
+  runCapturedHandler(seq, 'remove.addEventListener("click", () => {', removeScope);
+  assert.equal(removals, 0);
+  removeScope.window.confirm = () => true;
+  removeScope.capturedHandler();
+  assert.equal(removals, 1);
+});
+await test("The cutter canvas draws both its empty state and a selected waveform", async () => {
+  const calls = [];
+  const context = new Proxy({}, {
+    get(target, name) {
+      if (name in target) return target[name];
+      return (...args) => calls.push([name, ...args]);
+    },
+    set(target, name, value) { target[name] = value; return true; },
+  });
+  const scope = {
+    window: { devicePixelRatio: 2 },
+    canvas: { width: 800, height: 400 },
+    g: context,
+    buffer: null,
+    draw(playhead) {},
+  };
+  bind(scope, fn(cut, "draw") + "globalThis.draw = draw;");
+  scope.draw();
+  assert.ok(calls.some(([name, text]) => name === "fillText" && /forme d’onde/.test(text)));
+  calls.length = 0;
+  scope.buffer = { duration: 10 };
+  scope.duration = () => 10;
+  scope.selectionStart = 2;
+  scope.selectionEnd = 8;
+  scope.waveBase = { id: "base" };
+  scope.waveAccent = { id: "accent" };
+  scope.draw(5);
+  assert.equal(calls.filter(([name]) => name === "drawImage").length, 2);
+  assert.ok(calls.some(([name]) => name === "clip"));
+  assert.equal(calls.filter(([name]) => name === "stroke").length, 2);
+});
 function trackFixture() {
   const durationChecks = [];
   const scope = {
