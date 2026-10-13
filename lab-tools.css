@@ -28,6 +28,12 @@ body[data-tool] .pad {
 body[data-tool] .pad.on {
   border-color: var(--tone, var(--acid));
 }
+/* Show the active step when arrow-key focus is moved programmatically. */
+body[data-tool] .grid.keyboard-navigation .pad:focus {
+  z-index: 1;
+  outline: 3px solid #d8f36a;
+  outline-offset: 2px;
+}
 body[data-tool] .status {
   font-size: 13px;
 }

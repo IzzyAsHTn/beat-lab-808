@@ -322,6 +322,15 @@ await new Promise((resolve) => setImmediate(resolve));
 transaction.onerror();
 await deletionRejected;
 const document = { activeElement: null };
+const keyboardNavigationClasses = new Set();
+const keyboardNavigationListeners = {};
+const grid = {
+  classList: {
+    add(name) { keyboardNavigationClasses.add(name); },
+    remove(name) { keyboardNavigationClasses.delete(name); },
+  },
+  addEventListener(type, listener) { keyboardNavigationListeners[type] = listener; },
+};
 const rows = Array.from({ length: 2 }, () =>
   Array.from({ length: 32 }, () => ({
     tabIndex: 0,
@@ -333,6 +342,7 @@ const rows = Array.from({ length: 2 }, () =>
       document.activeElement = this;
       this.listeners.focus();
     },
+    closest(selector) { return selector === ".grid" ? grid : null; },
   })),
 );
 let visible = 16;
@@ -356,8 +366,12 @@ assert.equal(rows.flat().filter((b) => b.tabIndex === 0).length, 1);
 rows[0][0].focus();
 key(rows[0][0], "ArrowRight");
 assert.equal(document.activeElement, rows[0][1]);
+assert.equal(keyboardNavigationClasses.has("keyboard-navigation"), true);
+keyboardNavigationListeners.pointerdown();
+assert.equal(keyboardNavigationClasses.has("keyboard-navigation"), false);
 key(rows[0][1], "ArrowDown");
 assert.equal(document.activeElement, rows[1][1]);
+assert.equal(keyboardNavigationClasses.has("keyboard-navigation"), true);
 key(rows[1][1], "End");
 assert.equal(document.activeElement, rows[1][15]);
 visible = 8;
@@ -426,6 +440,7 @@ assert.match(fs.readFileSync(path.join(root, "lab-shared.css"), "utf8"), /:focus
 for (const page of ["index.html", "sequencer.html"])
   assert.match(fs.readFileSync(path.join(root, page), "utf8"), /lab-shared\.css/);
 assert.match(fs.readFileSync(path.join(root, "lab-tools.css"), "utf8"), /\.pad\.on\s*\{\s*border-color:\s*var\(--tone,\s*var\(--acid\)\)/);
+assert.match(fs.readFileSync(path.join(root, "lab-tools.css"), "utf8"), /\.grid\.keyboard-navigation \.pad:focus\s*\{[^}]*outline: 3px solid #d8f36a/);
 assert.match(fs.readFileSync(path.join(root, "index.js"), "utf8"), /piste \$\{trackIndex \+ 1\} sur \$\{tracks\.length\}, pas \$\{stepIndex \+ 1\} sur 16/);
 assert.match(fs.readFileSync(path.join(root, "sequencer.js"), "utf8"), /lengthAnnouncement\.textContent/);
 for (const name of [

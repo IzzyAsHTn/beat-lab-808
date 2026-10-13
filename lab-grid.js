@@ -9,6 +9,11 @@
       .filter((index) => index >= 0);
     if (!usableRows.length) return emptyNavigation;
 
+    const grid = rows[usableRows[0]][0]?.closest?.(".grid");
+    grid?.addEventListener("pointerdown", () => {
+      grid.classList.remove("keyboard-navigation");
+    });
+
     let position = { row: usableRows[0], column: 0 };
     const count = (rowIndex) => {
       const requested = Number(getStepCount());
@@ -71,6 +76,7 @@
           } else return;
 
           event.preventDefault();
+          grid?.classList.add("keyboard-navigation");
           target.column = Math.max(
             0,
             Math.min(count(target.row) - 1, target.column),
