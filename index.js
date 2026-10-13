@@ -57,6 +57,11 @@
       steps: Array(16).fill(0),
     },
   ];
+  function stepAccessibleLabel(trackIndex, stepIndex) {
+    const track = tracks[trackIndex];
+    const active = Boolean(track.steps[stepIndex]);
+    return `${track.label}, piste ${trackIndex + 1} sur ${tracks.length}, pas ${stepIndex + 1} sur 16, ${active ? "activé" : "désactivé"}`;
+  }
   tracks.forEach((track) => {
     track.muted = false;
     track.solo = false;
@@ -272,10 +277,7 @@
       cells[ti].forEach((pad, si) => {
         pad.classList.remove("on");
         pad.setAttribute("aria-pressed", "false");
-        pad.setAttribute(
-          "aria-label",
-          `${track.label}, pas ${si + 1}, désactivé`,
-        );
+        pad.setAttribute("aria-label", stepAccessibleLabel(ti, si));
       });
       savePattern();
     });
@@ -313,19 +315,13 @@
       pad.style.gridColumn = String(si + 2);
       pad.className =
         "pad" + (on ? " on" : "") + (si % 4 === 3 && si < 15 ? " divider" : "");
-      pad.setAttribute(
-        "aria-label",
-        `${track.label}, pas ${si + 1}${on ? ", activé" : ", désactivé"}`,
-      );
+      pad.setAttribute("aria-label", stepAccessibleLabel(ti, si));
       pad.setAttribute("aria-pressed", String(Boolean(on)));
       pad.addEventListener("click", () => {
         track.steps[si] = 1 - track.steps[si];
         pad.classList.toggle("on", Boolean(track.steps[si]));
         pad.setAttribute("aria-pressed", String(Boolean(track.steps[si])));
-        pad.setAttribute(
-          "aria-label",
-          `${track.label}, pas ${si + 1}, ${track.steps[si] ? "activé" : "désactivé"}`,
-        );
+        pad.setAttribute("aria-label", stepAccessibleLabel(ti, si));
         savePattern();
       });
       cells[ti][si] = pad;

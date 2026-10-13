@@ -363,9 +363,71 @@ assert.equal(document.activeElement, rows[1][15]);
 visible = 8;
 navigation.sync();
 assert.equal(document.activeElement, rows[1][7]);
+rows[0][0].focus();
+assert.equal(key(rows[0][0], "PageDown"), true);
+assert.equal(document.activeElement, rows[0][4]);
+assert.equal(key(rows[0][4], "PageUp"), true);
+assert.equal(document.activeElement, rows[0][0]);
 assert.equal(rows.flat().filter((b) => b.tabIndex === 0).length, 1);
 assert.equal(key(rows[1][7], "Tab"), false);
 assert.equal(key(rows[1][7], " "), false);
+
+window.BeatLabGrid([], () => 16).sync();
+window.BeatLabGrid([[], []], () => 16).sync();
+const raggedDocument = { activeElement: null };
+const makeButton = () => ({
+  tabIndex: -1,
+  listeners: {},
+  addEventListener(type, listener) {
+    this.listeners[type] = listener;
+  },
+  focus() {
+    raggedDocument.activeElement = this;
+    this.listeners.focus();
+  },
+});
+const raggedRows = [[makeButton(), makeButton(), makeButton()], [], [makeButton()]];
+const raggedWindow = {};
+vm.runInNewContext(fs.readFileSync(path.join(root, "lab-grid.js"), "utf8"), {
+  window: raggedWindow,
+  document: raggedDocument,
+});
+raggedWindow.BeatLabGrid(raggedRows, () => 16);
+raggedRows[0][2].focus();
+assert.equal(key(raggedRows[0][2], "ArrowDown"), true);
+assert.equal(raggedDocument.activeElement, raggedRows[2][0]);
+assert.equal(raggedRows.flat().filter((b) => b.tabIndex === 0).length, 1);
+
+const pageNames = [
+  "ateliers.html",
+  "groove-mystere.html",
+  "sequencer.html",
+  "index.html",
+  "samples.html",
+  "effects.html",
+];
+for (const page of pageNames) {
+  const html = fs.readFileSync(path.join(root, page), "utf8");
+  assert.match(
+    html,
+    new RegExp(
+      `<link rel="canonical" href="https://izzyashtn\\.github\\.io/beat-lab-808/${page}">`,
+    ),
+    `${page} canonical URL`,
+  );
+}
+const robots = fs.readFileSync(path.join(root, "robots.txt"), "utf8");
+const sitemap = fs.readFileSync(path.join(root, "sitemap.xml"), "utf8");
+assert.match(robots, /Sitemap: https:\/\/izzyashtn\.github\.io\/beat-lab-808\/sitemap\.xml/);
+for (const page of pageNames)
+  assert.ok(sitemap.includes(`https://izzyashtn.github.io/beat-lab-808/${page}`));
+assert.match(fs.readFileSync(path.join(root, "404.html"), "utf8"), /name="robots" content="noindex"/);
+assert.match(fs.readFileSync(path.join(root, "lab-shared.css"), "utf8"), /:focus-visible\s*\{\s*outline:3px solid/);
+for (const page of ["index.html", "sequencer.html"])
+  assert.match(fs.readFileSync(path.join(root, page), "utf8"), /lab-shared\.css/);
+assert.match(fs.readFileSync(path.join(root, "lab-tools.css"), "utf8"), /\.pad\.on\s*\{\s*border-color:\s*var\(--tone,\s*var\(--acid\)\)/);
+assert.match(fs.readFileSync(path.join(root, "index.js"), "utf8"), /piste \$\{trackIndex \+ 1\} sur \$\{tracks\.length\}, pas \$\{stepIndex \+ 1\} sur 16/);
+assert.match(fs.readFileSync(path.join(root, "sequencer.js"), "utf8"), /lengthAnnouncement\.textContent/);
 for (const name of [
   "index",
   "sequencer",
@@ -382,6 +444,9 @@ console.log(
       storageFailureReported: true,
       testVolumeRespected: [0, 35, 100],
       keyboardNavigationPassed: true,
+      gridEdgeCasesPassed: true,
+      pageNavigationPassed: true,
+      seoAndKeyboardFocusMarkersPassed: true,
       sampleDeletionErrorsReported: true,
       scriptsParsed: 5,
     },

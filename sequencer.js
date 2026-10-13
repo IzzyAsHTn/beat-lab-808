@@ -60,6 +60,7 @@
     play = $("#play"),
     status = $("#status"),
     persist = $("#persist"),
+    lengthAnnouncement = $("#length-status"),
     cells = [];
   let dbPromise = null,
     ctx = null,
@@ -498,9 +499,18 @@
       return false;
     }
   }
+  function stepAccessibleLabel(trackIndex, stepIndex, visibleSteps) {
+    const track = tracks[trackIndex];
+    const active = Boolean(track.steps[stepIndex]);
+    return `${track.name}, piste ${trackIndex + 1} sur ${tracks.length}, pas ${stepIndex + 1} sur ${visibleSteps}, ${active ? "activé" : "désactivé"}`;
+  }
   function drawSteps() {
     const visibleSteps = Number(length.value) || 16;
     grid.style.setProperty("--step-count", visibleSteps);
+    grid.setAttribute(
+      "aria-label",
+      `Grille de séquençage, ${visibleSteps} pas par piste`,
+    );
     headCells.forEach((cell, si) =>
       cell.classList.toggle("beyond", si >= visibleSteps),
     );
@@ -510,13 +520,7 @@
         b.classList.toggle("on", on);
         b.classList.toggle("beyond", si >= visibleSteps);
         b.setAttribute("aria-pressed", String(on));
-        b.setAttribute(
-          "aria-label",
-          tracks[ti].name +
-            ", pas " +
-            (si + 1) +
-            (on ? ", activé" : ", désactivé"),
-        );
+        b.setAttribute("aria-label", stepAccessibleLabel(ti, si, visibleSteps));
       }),
     );
     if (stepNavigation) stepNavigation.sync();
@@ -790,7 +794,7 @@
         (si >= Number(length.value) ? " beyond" : "");
       b.setAttribute(
         "aria-label",
-        track.name + ", pas " + (si + 1) + ", désactivé",
+        stepAccessibleLabel(ti, si, Number(length.value) || 16),
       );
       b.setAttribute("aria-pressed", "false");
       b.addEventListener("click", () => {
@@ -799,10 +803,7 @@
         b.setAttribute("aria-pressed", String(track.steps[si]));
         b.setAttribute(
           "aria-label",
-          track.name +
-            ", pas " +
-            (si + 1) +
-            (track.steps[si] ? ", activé" : ", désactivé"),
+          stepAccessibleLabel(ti, si, Number(length.value) || 16),
         );
         saveState();
       });
@@ -934,6 +935,9 @@
   });
   length.addEventListener("change", () => {
     drawSteps();
+    if (lengthAnnouncement)
+      lengthAnnouncement.textContent =
+        `La grille comporte maintenant ${Number(length.value)} pas par piste.`;
     saveState();
   });
   swing.addEventListener("change", saveState);

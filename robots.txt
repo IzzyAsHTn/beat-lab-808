@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://izzyashtn.github.io/beat-lab-808/sitemap.xml
