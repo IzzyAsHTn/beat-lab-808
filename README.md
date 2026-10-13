@@ -1,13 +1,13 @@
 # Beat Lab 808
 
-Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte à rythmes, séquenceur de samples, découpeur et effets. Aucun framework ni dépendance externe.
+Beat Lab est un petit studio musical autonome publié avec GitHub Pages : boîte à rythmes, Sample Sequencer, découpeur et effets. Aucun framework ni dépendance externe.
 
 ## Outils
 
 - `ateliers.html` — page d’accueil des ateliers musicaux, avec un accès à tous les outils.
 - `groove-mystere.html` — jeu musical inspiré du Simon : écoute la séquence de notes ou de percussions et reproduis-la ; la difficulté augmente au fil des tours. Les pads permettent aussi de découvrir les sons avant de jouer. Le bouton Arrêter annule la partie et ses sons en cours.
 - `index.html` — boîte à rythmes 8 voix et 16 pas avec deux kits. Le kit TR-808 emploie un clap synthétisé en rafales de bruit filtré et une courte réverbération; le kit Industriel joue le sample `industrial-clap.wav`, avec tuning par demi-tons. Chaque voix a ses boutons Mute, Solo et effacement du motif. Un compresseur protège la sortie audio. Son motif, le kit, le tempo et le swing sont mémorisés dans le navigateur.
-- `sequencer.html` — séquenceur de samples 8 pistes, boucles de 8 ou 16 pas, swing, volume, panoramique, Mute et Solo indépendants par piste, ainsi que filtre passe-bas, saturation, écho et réverbération par piste. Les pas masqués par la longueur choisie restent mémorisés.
+- `sequencer.html` — Sample Sequencer, 8 pistes, boucles de 8 ou 16 pas, swing, volume, panoramique, Mute et Solo indépendants par piste, ainsi que filtre passe-bas, saturation, écho et réverbération par piste. Les pas masqués par la longueur choisie restent mémorisés.
 - `samples.html` — lecteur et découpeur local de samples, forme d’onde, écoute et export WAV. Fichiers limités à 50 Mo et 5 minutes : les formats compressés peuvent occuper beaucoup plus de mémoire après décodage.
 - `effects.html` — impression hors ligne des effets dans un WAV; fichier limité à 2 minutes pour éviter une surcharge mémoire. Les effets temps réel par piste sont dans le séquenceur.
 

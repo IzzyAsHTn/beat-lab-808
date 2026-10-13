@@ -1,4 +1,7 @@
 /* Interfaces mobiles compactes des deux grilles, jusqu’à 650 px. */
+body[data-tool] .mobile-context,
+body[data-tool] .mobile-import-limit { display: none; }
+
 @media (max-width: 650px) {
   body:is([data-tool="sequencer"], [data-tool="drums"]) .lab-shell {
     padding-top: 16px;
@@ -13,6 +16,42 @@
   body[data-tool] .persist { line-height: 1.45; }
   body[data-tool] .grid-help { margin: 8px 0 6px; }
   body[data-tool] .lab-footer { margin-top: 22px; padding-top: 16px; gap: 10px; }
+  body[data-tool] .desktop-mobile-copy:not(.grid-help),
+  body[data-tool] .mobile-import-limit { display: none; }
+  body[data-tool] .mobile-context {
+    display: block;
+    margin: 12px 0;
+    border: 1px solid #48483e;
+    border-radius: 10px;
+    background: #1b1b18;
+    color: var(--muted, #aaa99e);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  body[data-tool] .mobile-context summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 12px;
+    color: var(--text, #f4f0df);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  body[data-tool] .mobile-context__content { padding: 0 12px 10px; }
+  body[data-tool] .mobile-context__content p { margin: 8px 0 0; }
+  body[data-tool] .mobile-context__content p:first-child { margin-top: 0; }
+  body[data-tool] .mobile-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  body[data-tool="sequencer"] .mobile-import-limit { display: block; }
 
   body[data-tool="sequencer"] .card { padding: 10px; }
   body[data-tool="sequencer"] .row { gap: 6px; }
