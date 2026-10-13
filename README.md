@@ -17,7 +17,7 @@ Le séquenceur enregistre automatiquement les motifs, réglages de mixage (volum
 
 ## Licences et attribution audio
 
-Le code du projet est publié sous licence MIT ; voir [`LICENSE`](LICENSE). Cette licence ne couvre pas les fichiers audio. `industrial-clap.wav` ne contient pas de métadonnée de créateur ou de licence exploitable. Sa provenance et ses conditions de réutilisation restent à confirmer ; ne présume pas que ce son est librement redistribuable.
+Le code du projet est publié sous licence MIT ; voir [`LICENSE`](LICENSE). Cette licence ne couvre pas les fichiers audio. Pour `industrial-clap.wav`, l’auteur et la licence n’ont pas pu être établis. Sa présence dans ce dépôt ne vaut pas autorisation de réutilisation ou de redistribution ; ne l’utilise pas hors du site sans confirmation des droits.
 
 ## Compatibilité navigateurs
 
@@ -35,7 +35,7 @@ Le sitemap inclut `<lastmod>` pour les six pages à partir de leur dernière mis
 
 Les six pages partagent la marque, les noms d’ateliers, la navigation et les styles de focus de `lab-shared.css`. Le bandeau, le contenu principal et le pied de page sont des repères distincts ; le lien d’évitement donne le focus à `main#contenu`. La page d’accueil utilise aussi `ateliers.css`. Aucun outil de compilation n’est nécessaire.
 
-Pour une installation manuelle, copie tous les fichiers HTML, CSS et JS du site, `404.html`, `robots.txt`, `sitemap.xml`, `industrial-clap.wav`, `favicon.svg`, `favicon.png`, `partage.svg` et `partage.png` à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Le fichier audio fourni est l’original, inchangé.
+Pour une installation manuelle, copie tous les fichiers HTML, CSS et JS du site, `404.html`, `robots.txt`, `sitemap.xml`, `industrial-clap.wav`, `favicon.svg`, `favicon.png`, `partage.svg` et `partage.png` à la racine du dépôt `IzzyAsHTn/beat-lab-808`, puis attends le déploiement Pages. Copie `industrial-clap.wav` tel quel pour que le kit industriel puisse charger cet échantillon.
 
 Les six pages déclarent la même favicon (SVG avec PNG de secours), un titre et une description Open Graph propres à chaque atelier, leur URL publique et une image de partage commune `partage.png` de 1200 × 630 px. `partage.svg` conserve sa source vectorielle. Si le site change de domaine ou de chemin, mets à jour les URL absolues `og:url` et `og:image` dans les six pages. Les images PNG sont fournies : aucune conversion n’est nécessaire pour publier le site.
 
