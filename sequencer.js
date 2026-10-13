@@ -750,7 +750,7 @@
       ["filter", "Filtre", 500, 18000, 18000, 100],
       ["drive", "Saturation", 0, 100, 0, 1],
       ["delay", "Écho", 0, 100, 0, 1],
-      ["reverb", "Réverbération", 0, 100, 0, 1],
+      ["reverb", "Reverb", 0, 100, 0, 1],
     ];
     fxDefs.forEach(([key, name, min, max, def, inc]) => {
       const wrap = document.createElement("label");

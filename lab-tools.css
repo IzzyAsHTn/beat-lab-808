@@ -210,6 +210,25 @@ body[data-tool="drums"] .track .pad {
 }
 
 @media (max-width: 650px) {
+  /* Reserve the same two-line label area so long FX names don't push one slider down. */
+  body[data-tool="sequencer"] .fxcontrol {
+    display: grid;
+    grid-template-rows: minmax(2.8em, auto) 24px;
+    align-content: start;
+  }
+  body[data-tool="sequencer"] .fxcontrol > span:first-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px;
+    min-height: 2.8em;
+  }
+  body[data-tool="sequencer"] .fxcontrol > span:first-child > span {
+    min-width: 0;
+  }
+  body[data-tool="sequencer"] .fxcontrol output {
+    margin-left: 0;
+  }
   body[data-tool="sequencer"] .trackinfo .trackname,
   body[data-tool="drums"] .voice-name {
     visibility: hidden;
