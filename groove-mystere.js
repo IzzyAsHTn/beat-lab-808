@@ -137,7 +137,7 @@ function renderMode() {
   );
   updateRoundLabel();
   gameModeTitle.textContent =
-    gameMode === "pattern" ? "Motif mystère" : "Simon musical";
+    gameMode === "pattern" ? "Motif mystère" : "Séquence musicale";
   if (gameMode === "pattern") {
     howto.textContent =
       "Un nouveau motif de 4 " +
@@ -206,7 +206,7 @@ function chooseGameMode(nextGameMode) {
   updateStatus(
     gameMode === "pattern"
       ? "Motif mystère choisi. Écoute une phrase musicale, puis reproduis-la. Chaque tour propose un nouveau motif."
-      : "Séquence Simon choisie. Écoute la suite, puis reproduis-la. Elle s'allongera à chaque tour.",
+      : "Séquence musicale choisie. Écoute la suite, puis reproduis-la. Elle s'allongera à chaque tour.",
   );
 }
 modeButtons[0].dataset.mode = "drums";
