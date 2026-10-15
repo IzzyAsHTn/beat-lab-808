@@ -1,0 +1,46 @@
+/* Accent orange partagé par la navigation et les commandes principales. */
+body .lab-nav a[aria-current="page"],
+body .lab-nav a[aria-current="page"]:hover {
+  color: var(--color-action-text);
+  background: var(--color-action);
+  border-color: var(--color-action);
+}
+
+body[data-tool="drums"] .lab-nav a[aria-current="page"],
+body[data-tool="drums"] .lab-nav a[aria-current="page"]:hover {
+  color: var(--color-action-text);
+  background: var(--color-action);
+  border-color: var(--color-action);
+}
+
+body .lab-nav a:hover:not([aria-current="page"]) {
+  color: var(--color-action-text);
+  background: var(--color-action);
+  border-color: var(--color-action);
+}
+
+body .btn.primary {
+  color: var(--color-action-text);
+  background: var(--color-action);
+  border-color: var(--color-action);
+}
+
+body .btn.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+body .track-toggle.is-active.solo {
+  color: var(--color-action);
+  background: #4b3518;
+  border-color: var(--color-action);
+}
+
+body .fx[open] summary,
+body .fx[open] summary::before {
+  color: var(--color-action);
+}
+
+body .fx[open] summary {
+  border-color: var(--color-action);
+  background: #29251b;
+}

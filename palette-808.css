@@ -1,0 +1,63 @@
+/* Palette TR-808 de la boîte à rythmes. */
+body[data-tool="drums"] {
+  --bg: #11110f;
+  --panel: #202020;
+  --line: #454540;
+  --text: #ffffff;
+  --muted: #c4c4bd;
+  --acid: #f1f827;
+  --orange: #f8a125;
+}
+
+body[data-tool="drums"] .machine {
+  background: linear-gradient(145deg, #292923, #202020);
+  border-color: #55554f;
+}
+
+body[data-tool="drums"] .play {
+  background: #f1f827;
+  border-color: #f1f827;
+  color: #202020;
+}
+
+body[data-tool="drums"] h1 span {
+  background: linear-gradient(90deg, #f1f827 0%, #f8a125 52%, #e72e2e 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+body[data-tool="drums"] .voice-toggle.mute.active {
+  border-color: #f8a125;
+  color: #f8a125;
+  background: #f8a1251a;
+  box-shadow: 0 0 8px #f8a12533;
+}
+
+body[data-tool="drums"] .voice-toggle.solo.active {
+  border-color: #f1f827;
+  color: #f1f827;
+  background: #f1f8271a;
+  box-shadow: 0 0 8px #f1f82733;
+}
+
+body[data-tool="drums"] .pad.on {
+  background: var(--tone, #f1f827);
+  border-color: var(--tone, #f1f827);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--tone, #f1f827) 32%, transparent);
+}
+
+/* Les voix reprennent les cinq teintes de la palette sans changer la grille. */
+body[data-tool="drums"] .track:nth-child(2) { --tone: #f1f827 !important; }
+body[data-tool="drums"] .track:nth-child(3) { --tone: #e72e2e !important; }
+body[data-tool="drums"] .track:nth-child(4) { --tone: #f8a125 !important; }
+body[data-tool="drums"] .track:nth-child(5) { --tone: #ffffff !important; }
+body[data-tool="drums"] .track:nth-child(6) { --tone: #f8a125 !important; }
+body[data-tool="drums"] .track:nth-child(7) { --tone: #e72e2e !important; }
+body[data-tool="drums"] .track:nth-child(8) { --tone: #f1f827 !important; }
+body[data-tool="drums"] .track:nth-child(9) { --tone: #ffffff !important; }
+
+body[data-tool="drums"] .grid.keyboard-navigation .pad:focus,
+body[data-tool="drums"] :is(a, button, input, select, summary, [tabindex="0"]):focus-visible {
+  outline-color: #f1f827;
+}

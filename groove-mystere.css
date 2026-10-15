@@ -61,7 +61,7 @@ body {
 }
 h1 {
   margin: 0;
-  font-size: clamp(25px, 5vw, 34px);
+  font-size: clamp(27px, 5.4vw, 38px);
   line-height: 1.1;
   letter-spacing: -0.04em;
 }
@@ -119,9 +119,11 @@ button {
     border-color 0.15s ease,
     filter 0.15s ease;
 }
-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: #67705f;
+@media (hover: hover) {
+  button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: #67705f;
+  }
 }
 button:focus-visible {
   outline: 3px solid var(--lime);
@@ -246,9 +248,11 @@ button:disabled {
   background: #398fce;
   --pad-glow: #398fce;
 }
-.pad:hover:not(:disabled) {
-  transform: none;
-  filter: brightness(1.09);
+@media (hover: hover) {
+  .pad:hover:not(:disabled) {
+    transform: none;
+    filter: brightness(1.09);
+  }
 }
 .pad.is-lit {
   transform: none;
@@ -304,6 +308,9 @@ button:disabled {
 @media (max-width: 460px) {
   .lab-shell {
     padding-top: 27px;
+  }
+  h1 {
+    font-size: 34px;
   }
   .game {
     padding: 18px 14px;

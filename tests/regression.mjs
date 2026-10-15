@@ -15,8 +15,11 @@ for (const htmlName of fs.readdirSync(root).filter((name) => name.endsWith(".htm
   for (const [, asset, version] of html.matchAll(
     /(?:src|href)="([^"]+\.(?:css|js))\?v=([a-f0-9]+)"/g,
   )) {
+    const localAsset = asset.startsWith("/beat-lab-808/")
+      ? asset.slice("/beat-lab-808/".length)
+      : asset.replace(/^\/+/, "");
     const digest = createHash("sha256")
-      .update(fs.readFileSync(path.join(root, asset)))
+      .update(fs.readFileSync(path.join(root, localAsset)))
       .digest("hex")
       .slice(0, version.length);
     assert.equal(version, digest, `${htmlName} cache version for ${asset}`);
