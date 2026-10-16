@@ -124,6 +124,21 @@ await test("808 step names keep track position and do not duplicate toggle state
   );
   assert.equal(label, "KICK, piste 1 sur 1, pas 1 sur 16");
   assert.doesNotMatch(label, /activé|désactivé/);
+  const attributes = {};
+  const button = {
+    classList: { toggle() {} },
+    setAttribute(name, value) { attributes[name] = value; },
+  };
+  const updateVoiceButton = fn(drums, "updateVoiceButton");
+  vm.runInNewContext(
+    `const button=${JSON.stringify({})};` + updateVoiceButton +
+      `;updateVoiceButton(globalThis.testButton,{label:"Kick",muted:true,solo:false},"mute");`,
+    { testButton: button, attributes },
+  );
+  assert.equal(attributes["aria-pressed"], "true");
+  assert.equal(attributes["aria-label"], "Kick · Mute");
+  assert.equal(button.title, "Kick · Mute");
+  assert.doesNotMatch(button.title, /réactiver|couper/);
 });
 await test("Clear and remove actions honor their confirmation dialog and restore complete labels", async () => {
   const steps = [true, true];
@@ -216,6 +231,10 @@ function trackFixture() {
       name: "Kick",
       load: core.latestOperation(),
       write: core.serialQueue(),
+      importSequence: 0,
+      committedImportSequence: 0,
+      storageEpoch: 0,
+      removing: false,
       _input: {},
       _label: {},
       buffer: { id: "previous" },
@@ -263,6 +282,54 @@ await test("IndexedDB sample reads reject errors instead of masquerading as miss
   request.error = Error("read failed");
   request.onerror();
   await assert.rejects(pending, /read failed/);
+});
+await test("IndexedDB open failures reject, clear the cached promise, and allow a retry", async () => {
+  let requests = 0;
+  const db = { close() {} };
+  const fakeIndexedDB = {
+    open() {
+      const request = { error: Error("temporary open failure"), result: db };
+      requests++;
+      queueMicrotask(() => {
+        if (requests === 1) request.onerror();
+        else request.onsuccess();
+      });
+      return request;
+    },
+  };
+  const scope = {
+    window: { indexedDB: fakeIndexedDB },
+    indexedDB: fakeIndexedDB,
+  };
+  bind(
+    scope,
+    `let dbPromise=null;const DB_NAME="test",DB_STORE="samples";${fn(seq, "openDB")};globalThis.openDB=openDB;`,
+  );
+  await assert.rejects(scope.openDB(), /temporary open failure/);
+  assert.equal(await scope.openDB(), db);
+  assert.equal(await scope.openDB(), db);
+  assert.equal(requests, 2);
+});
+await test("A blocked IndexedDB open is reported and a late success is closed", async () => {
+  let request;
+  const scope = {
+    window: { indexedDB: {} },
+    indexedDB: {
+      open() {
+        request = { result: { closed: false, close() { this.closed = true; } } };
+        return request;
+      },
+    },
+  };
+  bind(
+    scope,
+    `let dbPromise=null;const DB_NAME="test",DB_STORE="samples";${fn(seq, "openDB")};globalThis.openDB=openDB;`,
+  );
+  const pending = scope.openDB();
+  request.onblocked();
+  await assert.rejects(pending, /bloquée/);
+  request.onsuccess();
+  assert.equal(request.result.closed, true);
 });
 await test("The shared queue preserves write order and recovers after failure", async () => {
   const q = core.serialQueue(),
@@ -358,6 +425,29 @@ await test("A newer import that fails during an earlier write leaves memory and 
   assert.equal(s.track.fileName, "A.wav");
   assert.equal(s.track.buffer.id, "A");
   assert.deepEqual(s.writes, ["A.wav"]);
+});
+await test("A queued valid import still completes when a newer import fails decoding", async () => {
+  const s = trackFixture(),
+    releaseQueue = deferred();
+  s.ensureAudio = () => ({
+    decodeAudioData: async (bytes) => {
+      if (bytes.id === "B") throw Error("decode failed");
+      return { id: bytes.id };
+    },
+  });
+  const blocker = s.track.write(() => releaseQueue.promise);
+  const first = s.importSample(s.track, file("A"));
+  await tick();
+  const newer = s.importSample(s.track, file("B", async () => ({ id: "B" })));
+  await newer;
+  assert.match(s.status.textContent, /decode failed/);
+  releaseQueue.resolve();
+  await blocker;
+  await first;
+  assert.equal(s.track.fileName, "A.wav");
+  assert.equal(s.track.buffer.id, "A");
+  assert.deepEqual(s.writes, ["A.wav"]);
+  assert.match(s.status.textContent, /chargé et sauvegardé/);
 });
 await test("A failed sample write preserves the previous in-memory sample", async () => {
   const s = trackFixture();
@@ -500,7 +590,58 @@ await test("Industrial clap download aborts at its deadline", async () => {
   assert.equal(aborted, 1);
   assert.equal(cleared, 1);
 });
-await test("A failed industrial clap load is cached instead of fetched on every start", async () => {
+await test("Industrial clap timeout includes a stalled response body", async () => {
+  let onTimeout, aborted = 0, bodyRead = false;
+  class AbortControllerProbe {
+    constructor() { this.signal = {}; }
+    abort() { aborted++; }
+  }
+  const scope = {
+    AbortController: AbortControllerProbe,
+    INDUSTRIAL_CLAP_TIMEOUT_MS: 8000,
+    setTimeout(callback) { onTimeout = callback; return 9; },
+    clearTimeout() {},
+    fetch: async () => ({
+      ok: true,
+      arrayBuffer() { bodyRead = true; return new Promise(() => {}); },
+    }),
+    ctx: { decodeAudioData() { throw Error("decode should not start"); } },
+  };
+  const pending = vm.runInNewContext(
+    fn(drums, "fetchWithTimeout") + ";fetchWithTimeout('./industrial-clap.wav')",
+    scope,
+  );
+  await tick();
+  assert.equal(bodyRead, true);
+  onTimeout();
+  await assert.rejects(pending, /délai maximal/);
+  assert.equal(aborted, 1);
+});
+await test("Industrial clap timeout includes audio decoding", async () => {
+  let onTimeout, decodeStarted = false, aborted = 0;
+  class AbortControllerProbe {
+    constructor() { this.signal = {}; }
+    abort() { aborted++; }
+  }
+  const scope = {
+    AbortController: AbortControllerProbe,
+    INDUSTRIAL_CLAP_TIMEOUT_MS: 8000,
+    setTimeout(callback) { onTimeout = callback; return 10; },
+    clearTimeout() {},
+    fetch: async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(0) }),
+    ctx: { decodeAudioData() { decodeStarted = true; return new Promise(() => {}); } },
+  };
+  const pending = vm.runInNewContext(
+    fn(drums, "fetchWithTimeout") + ";fetchWithTimeout('./industrial-clap.wav')",
+    scope,
+  );
+  await tick();
+  assert.equal(decodeStarted, true);
+  onTimeout();
+  await assert.rejects(pending, /délai maximal/);
+  assert.equal(aborted, 1);
+});
+await test("A failed industrial clap load can be retried on a later start", async () => {
   let requests = 0;
   const scope = {
     industrialClapBuffer: null,
@@ -511,7 +652,12 @@ await test("A failed industrial clap load is cached instead of fetched on every 
   bind(scope, "async " + fn(drums, "loadIndustrialClap") + ";");
   assert.equal(await scope.loadIndustrialClap(), null);
   assert.equal(await scope.loadIndustrialClap(), null);
-  assert.equal(requests, 1);
+  assert.equal(requests, 2);
+});
+await test("808 tom synthesis safely skips a missing voice track", async () => {
+  vm.runInNewContext(
+    "const tracks=[];" + fn(drums, "tom") + ";tom(0,false);",
+  );
 });
 await test("The 808 reuses its clap reverb node and looks up voices by ID", async () => {
   let convolvers = 0, gains = 0;
@@ -687,6 +833,24 @@ await test("Groove stops when the tab is hidden or its active audio context is i
   onStateChange();
   assert.match(interruptionMessage, /interruption audio/);
 });
+await test("Groove stops the active game when audio resume rejects", async () => {
+  let stoppedMessage = "";
+  const scope = {
+    audioContext: {
+      state: "suspended",
+      resume() { return Promise.reject(new Error("resume denied")); },
+    },
+    session: { version: () => 4, current: (token) => token === 4 },
+    hasActiveGame: () => true,
+    stopForInterruption(message) { stoppedMessage = message; },
+    updateStatus(message) { stoppedMessage = message; },
+    scheduleSound() { assert.fail("must not schedule after rejected resume"); },
+  };
+  vm.runInNewContext(fn(source("groove-mystere"), "makeSound") + ";makeSound(0, 4)", scope);
+  await tick();
+  assert.match(stoppedMessage, /Partie arrêtée/);
+  assert.match(stoppedMessage, /réactiver le son/);
+});
 await test("Groove number keys activate pads without taking over text fields", async () => {
   const src = source("groove-mystere");
   const at = src.lastIndexOf('document.addEventListener("keydown", (event) => {');
@@ -840,6 +1004,23 @@ await test("Effects control output is optional and compressor settings are share
   assert.equal(created.ratio.value, 20);
   assert.equal(created.attack.value, 0.003);
   assert.equal(created.release.value, 0.12);
+});
+await test("Effects settings reject non-numeric values and saturation curves are cached", async () => {
+  const elements = new Map([
+    ["#cut", { value: "not-a-number", min: "500", max: "18000" }],
+    ["#drive", { value: "150", min: "0", max: "100" }],
+    ["#delay", { value: "", min: "0", max: "70" }],
+  ]);
+  const scope = bind(
+    { $: (selector) => elements.get(selector) || null },
+    `const driveCurves=new Map();${fn(source("effects"), "readControlValue")}${fn(source("effects"), "readSettings")}${fn(source("effects"), "makeDriveCurve")};globalThis.settings=readSettings();globalThis.first=makeDriveCurve(.3);globalThis.second=makeDriveCurve(.3);`,
+  );
+  assert.deepEqual(JSON.parse(JSON.stringify(scope.settings)), {
+    cut: 18000, drive: 1, delay: 0, reverb: 0,
+  });
+  assert.equal(scope.first, scope.second);
+  assert.equal(scope.first.length, 8192);
+  assert.ok([...scope.first].every(Number.isFinite));
 });
 await test("The cutter revokes a test-tone URL when playback is rejected", async () => {
   const revoked = [];

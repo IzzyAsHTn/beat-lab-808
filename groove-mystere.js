@@ -275,9 +275,10 @@ function makeSound(id, token = session.version(), when = null) {
       })
       .catch(() => {
         if (!session.current(token)) return;
-        updateStatus(
-          "Le son est suspendu par le navigateur. Clique sur « Lancer la partie » pour le réactiver.",
-        );
+        const message =
+          "Partie arrêtée : le navigateur n’a pas pu réactiver le son. Clique sur « Lancer la partie » pour reprendre.";
+        if (hasActiveGame()) stopForInterruption(message);
+        else updateStatus(message);
       });
   }
 }

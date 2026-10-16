@@ -50,6 +50,9 @@
     track.load = core.latestOperation();
     track.write = core.serialQueue();
     track.removing = false;
+    track.importSequence = 0;
+    track.committedImportSequence = 0;
+    track.storageEpoch = 0;
   });
   const $ = (s) => document.querySelector(s),
     grid = $("#grid"),
@@ -80,7 +83,13 @@
       dbPromise = Promise.resolve(null);
       return dbPromise;
     }
-    dbPromise = new Promise((resolve) => {
+    const opening = new Promise((resolve, reject) => {
+      let settled = false;
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        reject(error);
+      };
       try {
         const req = indexedDB.open(DB_NAME, 1);
         req.onupgradeneeded = () => {
@@ -88,14 +97,31 @@
           if (!d.objectStoreNames.contains(DB_STORE))
             d.createObjectStore(DB_STORE);
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => resolve(null);
-        req.onblocked = () => resolve(null);
-      } catch (_) {
-        resolve(null);
+        req.onsuccess = () => {
+          if (settled) {
+            req.result.close();
+            return;
+          }
+          settled = true;
+          req.result.onversionchange = () => {
+            req.result.close();
+            if (dbPromise === opening) dbPromise = null;
+          };
+          resolve(req.result);
+        };
+        req.onerror = () =>
+          fail(req.error || Error("Ouverture du stockage des samples impossible"));
+        req.onblocked = () =>
+          fail(Error("Ouverture du stockage bloquée par une autre page"));
+      } catch (error) {
+        fail(error);
       }
     });
-    return dbPromise;
+    dbPromise = opening;
+    opening.catch(() => {
+      if (dbPromise === opening) dbPromise = null;
+    });
+    return opening;
   }
   async function dbGet(key) {
     const d = await openDB();
@@ -400,16 +426,18 @@
       status.textContent = error.message;
       return;
     }
-    const token = track.load.begin();
+    track.load.begin();
+    const requestId = ++track.importSequence,
+      storageEpoch = track.storageEpoch;
     stop();
     status.textContent = "Chargement de " + file.name + "…";
     let decoded;
     try {
       await core.checkAudioFileDuration(file);
-      if (!track.load.current(token)) return;
+      if (track.removing || storageEpoch !== track.storageEpoch) return;
       const ac = ensureAudio(),
         bytes = await file.arrayBuffer();
-      if (!track.load.current(token)) return;
+      if (track.removing || storageEpoch !== track.storageEpoch) return;
       try {
         decoded = await ac.decodeAudioData(bytes);
       } catch (error) {
@@ -417,13 +445,13 @@
           throw new Error("Le navigateur n’a pas pu décoder ce fichier audio.");
         throw error;
       }
-      if (!track.load.current(token)) return;
+      if (track.removing || storageEpoch !== track.storageEpoch) return;
       if (decoded.duration > 120)
         throw new Error("La durée décodée dépasse la limite de 2 minutes.");
     } catch (error) {
-      if (track.load.current(token))
+      if (!track.removing && requestId === track.importSequence)
         status.textContent =
-          error.message || "Sample illisible ; le sample précédent est conservé.";
+          `Import de ${file.name} impossible : ${error.message || "sample illisible"} Le sample déjà sauvegardé est conservé.`;
       return;
     }
     const entry = {
@@ -433,26 +461,38 @@
     };
     try {
       await track.write(async () => {
-        if (!track.load.current(token)) return;
+        if (
+          track.removing ||
+          storageEpoch !== track.storageEpoch ||
+          requestId < track.committedImportSequence
+        )
+          return;
         await dbPut(track.id, entry);
+        if (track.removing || storageEpoch !== track.storageEpoch) return;
         // A newer import can start while IndexedDB is committing this one.
         // Reflect every successful write before the next queued write begins;
         // a later successful import will then replace both DB and memory.
         track.buffer = decoded;
         track.fileName = file.name;
         track.hasStoredSample = true;
+        track.committedImportSequence = requestId;
         applyFx(track);
         updateLabel(track, track._label);
       });
     } catch (error) {
-      if (!track.load.current(token)) return;
+      if (track.removing || storageEpoch !== track.storageEpoch) return;
       status.textContent =
-        "Enregistrement impossible ; le sample précédent est conservé.";
+        `Enregistrement de ${file.name} impossible ; le sample précédent est conservé.`;
       persist.textContent =
-        "Le navigateur n’a pas pu enregistrer ce sample. Le précédent est conservé.";
+        `Le navigateur n’a pas pu enregistrer ${file.name}. Le sample précédent est conservé.`;
       return;
     }
-    if (!track.load.current(token)) return;
+    if (
+      track.removing ||
+      storageEpoch !== track.storageEpoch ||
+      requestId !== track.committedImportSequence
+    )
+      return;
     status.textContent = "Sample chargé et sauvegardé";
     persist.textContent =
       "Samples et réglages conservés automatiquement sur cet appareil.";
@@ -460,6 +500,8 @@
   async function removeSample(track) {
     if (track.removing) return;
     track.load.begin();
+    track.storageEpoch++;
+    track.committedImportSequence = ++track.importSequence;
     track.removing = true;
     track._input.disabled = true;
     updateLabel(track, track._label);
@@ -978,7 +1020,7 @@
     drawSteps();
     if (lengthAnnouncement)
       lengthAnnouncement.textContent =
-        `La grille comporte maintenant ${Number(length.value)} pas par piste.`;
+        `La grille comporte maintenant ${Number(length.value)} pas par piste. Les pas masqués sont conservés et réapparaîtront si tu choisis une longueur supérieure.`;
     saveState();
   });
   swing.addEventListener("change", saveState);
@@ -1055,12 +1097,27 @@
       status.textContent = "Stockage des samples indisponible";
       return;
     }
-    const entries = await Promise.all(tracks.map((t) => dbGet(t.id)));
+    const entries = await Promise.allSettled(tracks.map((t) => dbGet(t.id)));
+    const failedReads = [];
     const results = await Promise.all(
-      tracks.map((t, i) => restoreSample(t, entries[i], versions[i])),
+      tracks.map((t, i) => {
+        if (entries[i].status === "rejected") {
+          failedReads.push(t.name);
+          return false;
+        }
+        return restoreSample(t, entries[i].value, versions[i]);
+      }),
     );
     if (tracks.some((t, i) => t.load.version() !== versions[i])) return;
     const restored = results.filter(Boolean).length;
+    if (failedReads.length) {
+      persist.textContent =
+        "Certains samples n’ont pas pu être lus dans IndexedDB. Les autres samples restent disponibles.";
+      status.textContent = restored
+        ? `${restored} sample(s) restauré(s) · lecture impossible pour ${failedReads.join(", ")}`
+        : `Lecture impossible pour ${failedReads.join(", ")} · charge les samples à nouveau`;
+      return;
+    }
     persist.textContent =
       "Samples et réglages enregistrés localement dans ce navigateur.";
     status.textContent = restored

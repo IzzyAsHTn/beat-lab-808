@@ -212,16 +212,11 @@
   }
   function updateVoiceButton(button, track, type) {
     const active = type === "mute" ? track.muted : track.solo;
+    const action = type === "mute" ? "Mute" : "Solo";
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
-    button.title =
-      type === "mute"
-        ? active
-          ? `${track.label} : réactiver`
-          : `${track.label} : couper`
-        : active
-          ? `${track.label} : retirer du solo`
-          : `${track.label} : écouter en solo`;
+    button.setAttribute("aria-label", `${track.label} · ${action}`);
+    button.title = `${track.label} · ${action}`;
   }
   tracks.forEach((track, ti) => {
     const row = document.createElement("div");
@@ -440,27 +435,29 @@
         reject(new Error("Le téléchargement du clap a dépassé le délai maximal."));
       }, INDUSTRIAL_CLAP_TIMEOUT_MS);
     });
-    const request = Promise.resolve().then(() =>
-      fetch(url, controller ? { signal: controller.signal } : undefined),
-    );
+    const request = Promise.resolve()
+      .then(() =>
+        fetch(url, controller ? { signal: controller.signal } : undefined),
+      )
+      .then((response) => {
+        if (!response.ok)
+          throw new Error(`Le serveur a répondu avec le code ${response.status}.`);
+        return response.arrayBuffer();
+      })
+      .then((data) => ctx.decodeAudioData(data));
     return Promise.race([request, timeout]).finally(() => clearTimeout(timeoutId));
   }
   function loadIndustrialClap() {
     if (industrialClapBuffer) return Promise.resolve(industrialClapBuffer);
     if (!industrialClapBufferPromise)
       industrialClapBufferPromise = fetchWithTimeout("./industrial-clap.wav")
-        .then((response) => {
-          if (!response.ok)
-            throw new Error(`Le serveur a répondu avec le code ${response.status}.`);
-          return response.arrayBuffer();
-        })
-        .then((data) => ctx.decodeAudioData(data))
         .then((buffer) => {
           industrialClapBuffer = buffer;
           return buffer;
         })
         .catch((error) => {
           console.warn("Clap industriel indisponible, utilisation du son synthétique.", error);
+          industrialClapBufferPromise = null;
           return null;
         });
     return industrialClapBufferPromise;
@@ -526,7 +523,7 @@
       (industrial ? 42 : 48) * ratio,
       t + (industrial ? 0.14 : 0.12),
     );
-    gain.gain.setValueAtTime(industrial ? 0.95 : 0.95, t);
+    gain.gain.setValueAtTime(0.95, t);
     gain.gain.exponentialRampToValueAtTime(
       0.001,
       t + (industrial ? 0.42 : 0.48),
@@ -585,7 +582,7 @@
       source.stop(t + (industrial ? 0.28 : 0.2));
       const osc = ctx.createOscillator(),
         tone = ctx.createGain();
-      osc.type = industrial ? "triangle" : "triangle";
+      osc.type = "triangle";
       osc.frequency.setValueAtTime((industrial ? 188 : 190) * ratio, t);
       if (industrial)
         osc.frequency.exponentialRampToValueAtTime(142 * ratio, t + 0.045);
@@ -671,9 +668,10 @@
     }
   }
   function tom(t, high) {
+    const track = tracks.find((item) => item.id === (high ? "highTom" : "lowTom"));
+    if (!track) return;
     const industrial = kit.value === "industrial",
-      track = tracks.find((item) => item.id === (high ? "highTom" : "lowTom")),
-      ratio = Math.pow(2, (track?.tuning || 0) / 12),
+      ratio = Math.pow(2, (track.tuning || 0) / 12),
       osc = ctx.createOscillator(),
       gain = ctx.createGain(),
       start = high ? (industrial ? 280 : 220) : industrial ? 175 : 145,

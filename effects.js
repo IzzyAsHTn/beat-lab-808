@@ -8,7 +8,9 @@
     downloadButton = $("#download"),
     status = $("#status"),
     name = $("#name");
-  const controls = ["cut", "drive", "delay", "reverb"].map((id) => $("#" + id));
+  const controls = ["cut", "drive", "delay", "reverb"]
+    .map((id) => $("#" + id))
+    .filter(Boolean);
   let inputBuffer = null,
     renderedBuffer = null,
     player = new Audio(),
@@ -19,6 +21,26 @@
     previewToken = 0,
     activeRender = null;
   const defaultRenderText = "Créer le rendu et préparer l’écoute";
+  function readControlValue(id, fallback) {
+    const control = $("#" + id);
+    if (!control || control.value === "") return fallback;
+    const value = Number(control.value);
+    if (!Number.isFinite(value)) return fallback;
+    const min = Number(control.min),
+      max = Number(control.max);
+    return Math.max(
+      Number.isFinite(min) ? min : -Infinity,
+      Math.min(Number.isFinite(max) ? max : Infinity, value),
+    );
+  }
+  function readSettings() {
+    return {
+      cut: readControlValue("cut", 18000),
+      drive: readControlValue("drive", 0) / 100,
+      delay: readControlValue("delay", 0) / 100,
+      reverb: readControlValue("reverb", 0) / 100,
+    };
+  }
   const setStatus = (message) => {
     status.textContent = message;
   };
@@ -45,12 +67,7 @@
   }
   function updatePreview() {
     if (!preview) return;
-    const settings = {
-      cut: Number($("#cut").value),
-      drive: Number($("#drive").value) / 100,
-      delay: Number($("#delay").value) / 100,
-      reverb: Number($("#reverb").value) / 100,
-    };
+    const settings = readSettings();
     const { context, filter, distortion, dry, delayWet, reverbWet } = preview;
     smoothParam(filter.frequency, settings.cut, context);
     distortion.curve = makeDriveCurve(settings.drive);
@@ -283,14 +300,19 @@
         }
     }
   });
+  const driveCurves = new Map();
   function makeDriveCurve(amount) {
-    const size = 44100,
+    const percent = Math.max(0, Math.min(100, Math.round(amount * 100))),
+      cached = driveCurves.get(percent);
+    if (cached) return cached;
+    const size = 8192,
       curve = new Float32Array(size),
-      k = amount * 180;
+      k = (percent / 100) * 180;
     for (let i = 0; i < size; i++) {
       const x = (i * 2) / (size - 1) - 1;
       curve[i] = ((1 + k) * x) / (1 + k * Math.abs(x));
     }
+    driveCurves.set(percent, curve);
     return curve;
   }
   function makeImpulse(context, seconds = 1.8) {
@@ -352,10 +374,7 @@
       distortion.oversample = "4x";
       source.connect(filter).connect(distortion);
       distortion.connect(dry).connect(output);
-      const settings = {
-        delay: Number($("#delay").value) / 100,
-        reverb: Number($("#reverb").value) / 100,
-      };
+      const settings = readSettings();
       let delayWet = null,
         reverbWet = null;
       {
@@ -498,12 +517,7 @@
     if (!inputBuffer || renderButton.disabled) return;
     stopPreview();
     const sourceBuffer = inputBuffer;
-    const settings = {
-      cut: Number($("#cut").value),
-      drive: Number($("#drive").value) / 100,
-      delay: Number($("#delay").value) / 100,
-      reverb: Number($("#reverb").value) / 100,
-    };
+    const settings = readSettings();
     const token = ++renderToken;
     clearRender();
     renderToken = token;

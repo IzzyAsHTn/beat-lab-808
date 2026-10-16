@@ -25,8 +25,8 @@ body[data-tool] .step-row {
 body[data-tool] .step-cell {
   display: contents;
 }
-body[data-tool="sequencer"] .step-cell[hidden] {
-  display: none;
+body[data-tool="sequencer"] [hidden] {
+  display: none !important;
 }
 body[data-tool] .pad {
   border-color: #8d8d7d;
