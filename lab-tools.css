@@ -215,6 +215,64 @@ body[data-tool="drums"] .track .pad {
   grid-row: 1;
 }
 
+/* Slightly tighten the sequencer rows on wide screens while preserving mobile controls. */
+@media (min-width: 651px) {
+  body[data-tool="sequencer"] .head,
+  body[data-tool="sequencer"] .track {
+    grid-template-columns: 232px repeat(
+        var(--step-count, 16),
+        var(--pad-size, 34px)
+      );
+  }
+  body[data-tool="sequencer"] .track {
+    margin: 4px 0;
+    grid-template-rows: auto 44px auto;
+  }
+  body[data-tool="sequencer"] .trackmix {
+    height: 44px;
+    gap: 3px;
+  }
+  body[data-tool="sequencer"] .tracktoggles {
+    gap: 3px;
+  }
+  body[data-tool="sequencer"] .track-toggle {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 3px 1px;
+    font-size: 11px;
+  }
+  body[data-tool="sequencer"] .mixcontrol {
+    grid-template-rows: 22px 22px;
+    font-size: 11px;
+  }
+  body[data-tool="sequencer"] .mixcontrol output {
+    font-size: 11px;
+  }
+  body[data-tool="sequencer"] .mixcontrol input {
+    height: 22px;
+  }
+  body[data-tool="sequencer"] .pan-reset {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+}
+
+/* Keep each track's color clear without the broad glow around active steps. */
+body[data-tool="sequencer"] .pad.on {
+  box-shadow: 0 0 8px color-mix(in srgb, var(--tone, var(--acid)) 18%, transparent);
+}
+
+/* Give the sequencer's main transport button its blue module accent. */
+body[data-tool="sequencer"] #play.btn.primary {
+  color: #101820;
+  background: #76caff;
+  border-color: #76caff;
+}
+body[data-tool="sequencer"] #play.btn.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
 @media (max-width: 650px) {
   /* Reserve the same two-line label area so long FX names don't push one slider down. */
   body[data-tool="sequencer"] .fxcontrol {
