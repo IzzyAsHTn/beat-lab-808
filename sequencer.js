@@ -757,10 +757,15 @@
     row.append(cue);
     const sampleline = document.createElement("div");
     sampleline.className = "sampleline";
+    const picker = document.createElement("label");
+    picker.className = "file-picker";
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "audio/*";
     input.setAttribute("aria-label", "Charger un sample pour " + track.name);
+    const pickerText = document.createElement("span");
+    pickerText.textContent = "Choisir un fichier";
+    picker.append(input, pickerText);
     const filename = document.createElement("span");
     filename.className = "filename";
     filename.textContent = "aucun sample";
@@ -770,7 +775,7 @@
     remove.textContent = "Retirer";
     remove.disabled = true;
     remove.setAttribute("aria-label", "Retirer le sample de " + track.name);
-    sampleline.append(input, filename, remove);
+    sampleline.append(picker, filename, remove);
     trackinfo.append(sampleline);
     label.append(trackinfo);
     const mixpanel = document.createElement("div");
@@ -1206,14 +1211,14 @@
       persist.textContent =
         "Certains samples n’ont pas pu être restaurés. Les fichiers encore présents dans le stockage peuvent être retirés ou remplacés ; les autres samples restent disponibles.";
       status.textContent = restored
-        ? `${restored} sample(s) restauré(s) · ${failures}`
+        ? `${restored} sample${restored === 1 ? "" : "s"} restauré${restored === 1 ? "" : "s"} · ${failures}`
         : `Restauration incomplète · ${failures}`;
       return;
     }
     persist.textContent =
       "Samples et réglages enregistrés localement dans ce navigateur.";
     status.textContent = restored
-      ? restored + " sample(s) restauré(s) automatiquement"
+      ? `${restored} sample${restored === 1 ? "" : "s"} restauré${restored === 1 ? "" : "s"} automatiquement`
       : "Prêt · charge des samples pour commencer";
   }
   restore().catch((e) => {
