@@ -261,6 +261,7 @@
       try {
         window.BeatLabCore.checkAudioFile(selected);
       } catch (error) {
+        name.textContent = "Aucun fichier chargé";
         setStatus(error.message);
         return;
       }
@@ -308,6 +309,7 @@
       if (token !== loadToken) return;
       inputBuffer = null;
       renderButton.disabled = true;
+      name.textContent = "Aucun fichier chargé";
       setStatus(
         formatError("Impossible de décoder ce fichier", error) +
           " Essaie un WAV PCM ou un MP3 standard.",
@@ -322,7 +324,10 @@
     }
   }
   file.addEventListener("change", () => {
-    void loadSelectedFile(file.files && file.files[0]);
+    const selected = file.files && file.files[0];
+    // Clearing the control lets the same file trigger another change event.
+    file.value = "";
+    void loadSelectedFile(selected);
   });
   const driveCurves = new Map();
   function makeDriveCurve(amount) {

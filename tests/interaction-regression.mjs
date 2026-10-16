@@ -531,6 +531,56 @@ await test("A queued valid import still completes when a newer import fails deco
   assert.match(s.status.textContent, /A\.wav.*finalement été sauvegardé/);
   assert.doesNotMatch(s.status.textContent, /Le sample déjà sauvegardé est conservé/);
 });
+await test("A stale decode completion cannot overwrite a later successful import message", async () => {
+  const s = trackFixture(),
+    decodeA = deferred();
+  s.ensureAudio = () => ({
+    decodeAudioData: (bytes) =>
+      bytes.id === "A" ? decodeA.promise : Promise.resolve({ id: bytes.id }),
+  });
+  const a = s.importSample(s.track, file("A"));
+  await tick();
+  await s.importSample(s.track, {
+    ...file("B"),
+    arrayBuffer: async () => { throw Error("B decode failed"); },
+  });
+  await s.importSample(s.track, file("C"));
+  decodeA.resolve({ id: "A" });
+  await a;
+  assert.equal(s.track.fileName, "C.wav");
+  assert.equal(s.track.buffer.id, "C");
+  assert.equal(s.status.textContent, "Sample chargé et sauvegardé");
+  assert.match(s.persist.textContent, /conservés automatiquement/);
+  assert.deepEqual(s.writes, ["C.wav"]);
+});
+await test("A stale write failure cannot overwrite the newest import status", async () => {
+  const s = trackFixture(),
+    writeStarted = deferred(),
+    finishA = deferred();
+  s.dbPut = async (id, entry) => {
+    if (entry.name === "A.wav") {
+      writeStarted.resolve();
+      await finishA.promise;
+      throw Error("quota");
+    }
+    s.writes.push(entry.name);
+  };
+  const a = s.importSample(s.track, file("A"));
+  await writeStarted.promise;
+  await s.importSample(s.track, {
+    ...file("B"),
+    arrayBuffer: async () => { throw Error("B decode failed"); },
+  });
+  const c = s.importSample(s.track, file("C"));
+  await tick();
+  finishA.resolve();
+  await Promise.all([a, c]);
+  assert.equal(s.track.fileName, "C.wav");
+  assert.equal(s.track.buffer.id, "C");
+  assert.equal(s.status.textContent, "Sample chargé et sauvegardé");
+  assert.match(s.persist.textContent, /conservés automatiquement/);
+  assert.deepEqual(s.writes, ["C.wav"]);
+});
 await test("A failed sample write preserves the previous in-memory sample", async () => {
   const s = trackFixture();
   s.dbPut = async () => {
@@ -906,17 +956,24 @@ await test("Groove scores restore valid values and default safely on corrupt sto
       localStorage: {
         getItem: () => JSON.stringify({ bestByMode: { drums: 8.9, notes: -2 } }),
       },
+      persistenceStatus: { hidden: true, textContent: "" },
     },
   );
   assert.deepEqual(JSON.parse(restored), {
     bestByMode: { drums: 8, notes: 0 },
     bestPatternsByMode: { drums: 0, notes: 0 },
   });
+  const readFailure = { hidden: true, textContent: "" };
   const corrupt = vm.runInNewContext(
     'const SCORE_KEY="scores";' + read + ';JSON.stringify(readScores());',
-    { localStorage: { getItem: () => "{" } },
+    {
+      localStorage: { getItem: () => { throw Error("storage denied"); } },
+      persistenceStatus: readFailure,
+    },
   );
   assert.deepEqual(JSON.parse(corrupt).bestByMode, { drums: 0, notes: 0 });
+  assert.equal(readFailure.hidden, false);
+  assert.match(readFailure.textContent, /n’a pas pu être lu/);
   let persisted = "";
   const save = fn(grooveSource, "saveScores");
   vm.runInNewContext(
@@ -1042,6 +1099,7 @@ await test("Groove stops the active game when audio resume rejects", async () =>
       resume() { return Promise.reject(new Error("resume denied")); },
     },
     session: { version: () => 4, current: (token) => token === 4 },
+    watchAudioContext() {},
     hasActiveGame: () => true,
     stopForInterruption(message) { stoppedMessage = message; },
     updateStatus(message) { stoppedMessage = message; },
@@ -1060,6 +1118,7 @@ await test("Groove reports a resume that resolves without a running audio contex
       resume: () => Promise.resolve(),
     },
     session: { version: () => 4, current: (token) => token === 4 },
+    watchAudioContext() {},
     hasActiveGame: () => true,
     stopForInterruption(message) { stoppedMessage = message; },
     updateStatus(message) { stoppedMessage = message; },
@@ -1388,10 +1447,11 @@ await test("Groove Mystere skips pad flashes when reduced motion is requested", 
     const scope = {
       window: { matchMedia: () => ({ matches: reduce }) },
       session: { version: () => 1, current: () => true },
+      audioContext: { currentTime: 0 },
       pads: [pad],
       flashVersions: [0],
       wait: async () => {},
-      makeSound: (id) => sounds.push(id),
+      makeSound: (id) => { sounds.push(id); return Promise.resolve(0); },
     };
     bind(scope, fn(game, "prefersReducedMotion") + "async " + fn(game, "flash") + ";flash(0);");
     await tick();
@@ -1419,7 +1479,8 @@ await test("Oversized files are refused before reading or decoding", async () =>
   assert.equal(s.track.load.version(), 2);
   assert.deepEqual(s.writes, []);
   assert.match(s.status.textContent, /50 Mo/);
-  assert.match(s.status.textContent, /A\.wav a été annulé/);
+  assert.match(s.status.textContent, /Import de B\.wav impossible/);
+  assert.doesNotMatch(s.status.textContent, /A\.wav a été annulé/);
 });
 function transportFixture() {
   const resume = deferred(),
@@ -1944,10 +2005,38 @@ await test("Effects invalidate the previous buffer when a newly selected file is
   assert.equal(s.inputBuffer, null);
   assert.equal(s.renderButton.disabled, true);
   assert.equal(s.previewButton.disabled, true);
-  assert.equal(s.name.textContent, "rejected.wav");
+  assert.equal(s.name.textContent, "Aucun fichier chargé");
   assert.equal(s.previewStopped, true);
   assert.equal(s.renderCleared, true);
   assert.match(s.status, /Fichier trop volumineux/);
+});
+await test("Effects clear the file input after selection so the same file can be retried", async () => {
+  const selected = { name: "same.wav" },
+    calls = [],
+    control = {
+      files: [selected],
+      value: "same.wav",
+      addEventListener(name, callback) {
+        assert.equal(name, "change");
+        this.onchange = callback;
+      },
+    };
+  const handler = block(
+    effectsSource,
+    effectsSource.indexOf('file.addEventListener("change"'),
+  );
+  const scope = bind(
+    { file: control, loadSelectedFile: async (item) => calls.push(item) },
+    handler + ");",
+  );
+  for (let attempt = 0; attempt < 2; attempt++) {
+    control.files = [selected];
+    control.value = "same.wav";
+    scope.file.onchange();
+  }
+  await tick();
+  assert.deepEqual(calls, [selected, selected]);
+  assert.equal(control.value, "");
 });
 await test("Effects preview creates reverb only when its control is above zero", async () => {
   let settings = { cut: 12000, drive: 0, delay: 0, reverb: 0 },

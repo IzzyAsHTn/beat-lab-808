@@ -487,13 +487,7 @@
       }
       return;
     }
-    if (requestId !== track.importSequence) {
-      const laterFailure = track.latestImportFailure;
-      if (laterFailure && laterFailure.requestId > requestId)
-        status.textContent =
-          `Import de ${laterFailure.name} impossible : ${laterFailure.message} L’import précédent de ${file.name} a été annulé ; le sample déjà sauvegardé est conservé.`;
-      return;
-    }
+    if (requestId !== track.importSequence) return;
     const entry = {
       blob: file,
       name: file.name,
@@ -519,7 +513,11 @@
         updateLabel(track, track._label);
       });
     } catch (error) {
-      if (storageEpoch !== track.storageEpoch) return;
+      if (
+        storageEpoch !== track.storageEpoch ||
+        requestId !== track.importSequence
+      )
+        return;
       status.textContent =
         `Enregistrement de ${file.name} impossible ; le sample précédent est conservé.`;
       persist.textContent =
@@ -532,13 +530,18 @@
     )
       return;
     const laterFailure = track.latestImportFailure;
-    if (laterFailure && laterFailure.requestId > requestId) {
+    if (
+      laterFailure &&
+      laterFailure.requestId > requestId &&
+      laterFailure.requestId === track.importSequence
+    ) {
       status.textContent =
         `Import de ${laterFailure.name} impossible : ${laterFailure.message} Le sample ${file.name}, importé juste avant, a finalement été sauvegardé.`;
       persist.textContent =
         `Le sample ${file.name} a été sauvegardé sur cet appareil. La tentative d’import plus récente a échoué.`;
       return;
     }
+    if (requestId !== track.importSequence) return;
     status.textContent = "Sample chargé et sauvegardé";
     persist.textContent =
       "Samples et réglages conservés automatiquement sur cet appareil.";

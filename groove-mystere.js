@@ -63,7 +63,11 @@ function readScores() {
           0,
           Math.floor(Number(saved?.[key]?.[gameMode]) || 0),
         );
-  } catch (error) {}
+  } catch (error) {
+    persistenceStatus.textContent =
+      "Le meilleur score enregistré n’a pas pu être lu. Les scores commencent à zéro pour cette session.";
+    persistenceStatus.hidden = false;
+  }
   return scores;
 }
 const scores = readScores();
@@ -279,29 +283,39 @@ gameModeButtons.forEach((button) =>
 function makeSound(id, token = session.version(), when = null) {
   audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
   const ctx = audioContext;
+  watchAudioContext(ctx);
+  const play = () => {
+    if (ctx.state !== "running" || !session.current(token)) return null;
+    const scheduledAt = Math.max(
+      ctx.currentTime,
+      Number.isFinite(when) ? when : ctx.currentTime,
+    );
+    scheduleSound(id, ctx, scheduledAt);
+    return scheduledAt;
+  };
   if (ctx.state === "running") {
-    scheduleSound(id, ctx, when);
-  } else {
-    void ctx
-      .resume()
-      .then(() => {
-        if (ctx.state === "running" && session.current(token)) {
-          scheduleSound(id, ctx, when);
-        } else if (session.current(token)) {
-          const message =
-            "Partie arrêtée : le navigateur n’a pas pu réactiver le son. Clique sur « Lancer la partie » pour reprendre.";
-          if (hasActiveGame()) stopForInterruption(message);
-          else updateStatus(message);
-        }
-      })
-      .catch(() => {
-        if (!session.current(token)) return;
-        const message =
-          "Partie arrêtée : le navigateur n’a pas pu réactiver le son. Clique sur « Lancer la partie » pour reprendre.";
-        if (hasActiveGame()) stopForInterruption(message);
-        else updateStatus(message);
-      });
+    return Promise.resolve(play());
   }
+  return ctx
+    .resume()
+    .then(() => {
+      const scheduledAt = play();
+      if (scheduledAt !== null) return scheduledAt;
+      if (!session.current(token)) return null;
+      const message =
+        "Partie arrêtée : le navigateur n’a pas pu réactiver le son. Clique sur « Lancer la partie » pour reprendre.";
+      if (hasActiveGame()) stopForInterruption(message);
+      else updateStatus(message);
+      return null;
+    })
+    .catch(() => {
+      if (!session.current(token)) return null;
+      const message =
+        "Partie arrêtée : le navigateur n’a pas pu réactiver le son. Clique sur « Lancer la partie » pour reprendre.";
+      if (hasActiveGame()) stopForInterruption(message);
+      else updateStatus(message);
+      return null;
+    });
 }
 
 function trackSound(node) {
@@ -384,18 +398,15 @@ function scheduleSound(id, ctx, when = null) {
   }
 }
 
-function flash(id, duration = 190, token = session.version(), when = null) {
+async function flash(id, duration = 190, token = session.version(), when = null) {
   if (!session.current(token)) return;
   const pad = pads[id],
     version = ++flashVersions[id],
-    showFlash = !prefersReducedMotion(),
-    ctx = typeof audioContext === "undefined" ? null : audioContext,
-    audioTime = ctx
-      ? Math.max(ctx.currentTime, Number.isFinite(when) ? when : ctx.currentTime)
-      : null,
-    delay = ctx ? Math.max(0, (audioTime - ctx.currentTime) * 1000) : 0;
-  makeSound(id, token, audioTime);
-  if (!showFlash) return Promise.resolve();
+    showFlash = !prefersReducedMotion();
+  const scheduledAt = await makeSound(id, token, when);
+  if (!showFlash || scheduledAt === null) return;
+  const ctx = audioContext,
+    delay = Math.max(0, (scheduledAt - ctx.currentTime) * 1000);
   if (delay < 16) pad.classList.add("is-lit");
   const light = () => {
     if (!session.current(token) || flashVersions[id] !== version) return;
@@ -597,6 +608,7 @@ pads.forEach((pad, id) =>
     inputIndex++;
     if (inputIndex < sequence.length) return;
     phase = "between";
+    setPadsDisabled(true);
     if (gameMode === "pattern") {
       completedPatterns++;
       bestPatternsByMode[mode] = Math.max(
