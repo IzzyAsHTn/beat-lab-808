@@ -2093,14 +2093,19 @@ await test("Effects preview creates reverb only when its control is above zero",
   assert.equal(convolvers, 1);
   assert.equal(connected, 2);
 });
-await test("Cancelled Effects rendering stays active until offline rendering settles", async () => {
-  let resolveCheckpoint, resolveRendering, settled = false;
+await test("Cancelled Effects rendering returns while its offline work continues", async () => {
+  let resolveCheckpoint, resolveRendering, settled = false, renderSettled = false;
   const context = {
     length: 2,
     sampleRate: 1,
     suspend() { return new Promise((resolve) => { resolveCheckpoint = resolve; }); },
     resume() { return Promise.resolve(); },
-    startRendering() { return new Promise((resolve) => { resolveRendering = resolve; }); },
+    startRendering() {
+      return new Promise((resolve) => { resolveRendering = resolve; }).then((value) => {
+        renderSettled = true;
+        return value;
+      });
+    },
   };
   const run = vm.runInNewContext(
     "async " + fn(effectsSource, "renderOfflineCancellable") + ";renderOfflineCancellable",
@@ -2108,13 +2113,15 @@ await test("Cancelled Effects rendering stays active until offline rendering set
   const operation = { cancelled: true };
   const pending = run(context, operation, () => {}).then((value) => { settled = true; return value; });
   resolveCheckpoint();
-  await Promise.resolve();
-  await Promise.resolve();
-  assert.equal(settled, false);
-  resolveRendering({ id: "finished" });
+  await tick();
   const result = await pending;
-  assert.equal(result.buffer, null);
+  assert.equal(settled, true);
+  assert.equal(renderSettled, false);
   assert.equal(result.cancelled, true);
+  assert.equal(typeof result.background.then, "function");
+  resolveRendering({ id: "finished" });
+  await result.background;
+  assert.equal(renderSettled, true);
 });
 await test("Effects cannot start a second render while a cancelled render is still pending", async () => {
   const scope = {
@@ -2128,12 +2135,97 @@ await test("Effects cannot start a second render while a cancelled render is sti
     handler = vm.runInNewContext(`async () => ${body}`, scope);
   await handler();
 });
-await test("Effects explains that cancelled offline work must finish before controls unlock", async () => {
+await test("Effects unlocks other controls but holds the render lock until background work settles", async () => {
+  const operation = { cancelled: true },
+    background = deferred(),
+    scope = {
+      activeRender: operation,
+      renderUiBusy: true,
+      renderToken: 4,
+      inputBuffer: { id: "source" },
+      defaultRenderText: "Créer le rendu et préparer l’écoute",
+      file: { disabled: true },
+      controls: [{ disabled: true }],
+      renderButton: { disabled: true, textContent: "" },
+      previewButton: {
+        disabled: true,
+        textContent: "",
+        setAttribute() {},
+      },
+      cancelRenderButton: { hidden: false, disabled: true },
+      preview: null,
+      status: { textContent: "" },
+      setStatus(message) { scope.status.textContent = message; },
+    };
+  bind(
+    scope,
+    fn(effectsSource, "setPreviewBusy") +
+      fn(effectsSource, "updateRenderButton") +
+      fn(effectsSource, "setBusy") +
+      fn(effectsSource, "releaseBackgroundRender") +
+      "globalThis.setBusy = setBusy;globalThis.releaseBackgroundRender = releaseBackgroundRender;",
+  );
+  scope.setBusy(false);
+  scope.releaseBackgroundRender(operation, 4, background.promise);
+  assert.equal(scope.file.disabled, false);
+  assert.equal(scope.controls[0].disabled, false);
+  assert.equal(scope.previewButton.disabled, false);
+  assert.equal(scope.renderButton.disabled, true);
+  assert.match(scope.renderButton.textContent, /arrière-plan/);
+  assert.equal(scope.activeRender, operation);
+  background.resolve();
+  await tick();
+  assert.equal(scope.activeRender, null);
+  assert.equal(scope.renderButton.disabled, false);
+  assert.equal(scope.renderButton.textContent, scope.defaultRenderText);
+  assert.match(scope.status.textContent, /aucun rendu n’a été conservé/);
+});
+await test("An obsolete cancelled render keeps its lock without overwriting newer file status", async () => {
+  const operation = { cancelled: true },
+    background = deferred(),
+    scope = {
+      activeRender: operation,
+      renderUiBusy: false,
+      renderToken: 5,
+      inputBuffer: { id: "new-source" },
+      defaultRenderText: "Créer le rendu et préparer l’écoute",
+      file: { disabled: false },
+      controls: [{ disabled: false }],
+      renderButton: { disabled: false, textContent: "" },
+      previewButton: {
+        disabled: false,
+        textContent: "",
+        setAttribute() {},
+      },
+      cancelRenderButton: { hidden: true, disabled: true },
+      preview: null,
+      status: { textContent: "Fichier prêt · nouvel audio" },
+      setStatus(message) { scope.status.textContent = message; },
+    };
+  bind(
+    scope,
+    fn(effectsSource, "setPreviewBusy") +
+      fn(effectsSource, "updateRenderButton") +
+      fn(effectsSource, "setBusy") +
+      fn(effectsSource, "releaseBackgroundRender") +
+      "globalThis.setBusy = setBusy;globalThis.releaseBackgroundRender = releaseBackgroundRender;",
+  );
+  scope.setBusy(false);
+  scope.releaseBackgroundRender(operation, 4, background.promise);
+  assert.equal(scope.renderButton.disabled, true);
+  background.resolve();
+  await tick();
+  assert.equal(scope.activeRender, null);
+  assert.equal(scope.renderButton.disabled, false);
+  assert.equal(scope.status.textContent, "Fichier prêt · nouvel audio");
+});
+await test("Effects immediately releases controls and explains the background render lock", async () => {
   const scope = {
     activeRender: { cancellable: true, cancelled: false },
     cancelRenderButton: { disabled: false },
     message: "",
     setStatus(value) { scope.message = value; },
+    setBusy(value) { scope.released = value === false; },
   };
   runCapturedHandler(
     effectsSource,
@@ -2143,7 +2235,8 @@ await test("Effects explains that cancelled offline work must finish before cont
   scope.capturedHandler();
   assert.equal(scope.activeRender.cancelled, true);
   assert.equal(scope.cancelRenderButton.disabled, true);
-  assert.match(scope.message, /terminera le calcul avant de libérer les commandes/);
+  assert.equal(scope.released, true);
+  assert.match(scope.message, /les autres commandes sont disponibles/);
 });
 await test("The cutter canvas is keyboard focusable and normalization protects near-silence", async () => {
   const html = fs.readFileSync(path.join(root, "samples.html"), "utf8"),

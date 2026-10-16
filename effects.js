@@ -19,6 +19,7 @@
     renderToken = 0,
     preview = null,
     previewToken = 0,
+    renderUiBusy = false,
     activeRender = null;
   const defaultRenderText = "Créer le rendu et préparer l’écoute";
   function readControlValue(id, fallback) {
@@ -104,7 +105,7 @@
     preview = null;
     previewButton.textContent = "▶ Préécouter en boucle";
     previewButton.setAttribute("aria-pressed", "false");
-    previewButton.disabled = !inputBuffer || renderButton.disabled;
+    previewButton.disabled = renderUiBusy || !inputBuffer;
     if (active) {
       try {
         active.source.stop();
@@ -123,7 +124,7 @@
     if (message) setStatus(message);
   }
   function setPreviewBusy(busy) {
-    previewButton.disabled = busy || !inputBuffer || renderButton.disabled;
+    previewButton.disabled = busy || !inputBuffer;
     previewButton.textContent = busy
       ? "Préparation de la préécoute…"
       : preview
@@ -131,15 +132,39 @@
         : "▶ Préécouter en boucle";
     previewButton.setAttribute("aria-pressed", String(Boolean(preview)));
   }
+  function updateRenderButton() {
+    renderButton.disabled = renderUiBusy || Boolean(activeRender) || !inputBuffer;
+    renderButton.textContent = activeRender?.cancelled
+      ? "Rendu précédent en arrière-plan…"
+      : renderUiBusy
+        ? "Rendu en cours…"
+        : defaultRenderText;
+  }
   function setBusy(busy) {
+    renderUiBusy = busy;
     file.disabled = busy;
     controls.forEach((control) => (control.disabled = busy));
-    renderButton.disabled = busy || !inputBuffer;
-    renderButton.textContent = busy ? "Rendu en cours…" : defaultRenderText;
+    updateRenderButton();
     cancelRenderButton.hidden =
       !busy || !activeRender || !activeRender.cancellable;
     cancelRenderButton.disabled = !busy || !activeRender?.cancellable;
     setPreviewBusy(busy);
+  }
+  function releaseBackgroundRender(operation, token, background) {
+    const notice = token === renderToken
+      ? "Annulation demandée · le calcul continue en arrière-plan. Les autres commandes sont disponibles ; un nouveau rendu sera possible à la fin."
+      : "";
+    if (notice) setStatus(notice);
+    operation.backgroundPending = true;
+    const finishBackground = () => {
+      if (activeRender !== operation) return;
+      operation.backgroundPending = false;
+      activeRender = null;
+      setBusy(false);
+      if (notice && token === renderToken && status.textContent === notice)
+        setStatus("Calcul d’arrière-plan terminé · aucun rendu n’a été conservé.");
+    };
+    background.then(finishBackground, finishBackground);
   }
   async function renderOfflineCancellable(context, operation, onCapability) {
     const duration = context.length / context.sampleRate;
@@ -176,11 +201,18 @@
         return { buffer: await rendering, cancelled: false };
       }
       if (operation.cancelled) {
-        await context.resume();
-        // OfflineAudioContext has no abort method. Keep this operation active
-        // until its rendering promise settles so a second render cannot overlap.
-        await rendering.catch(() => null);
-        return { buffer: null, cancelled: true };
+        // OfflineAudioContext cannot abort startRendering(). Resume it and
+        // detach the handled promise so the UI can return while it finishes.
+        const background = rendering.then(
+          () => undefined,
+          () => undefined,
+        );
+        try {
+          await context.resume();
+        } catch (error) {
+          // Keep the render lock until the already-handled promise settles.
+        }
+        return { buffer: null, cancelled: true, background };
       }
       if (nextTime + interval >= duration) {
         await context.resume();
@@ -294,7 +326,7 @@
         );
       }
       inputBuffer = decoded;
-      renderButton.disabled = false;
+      updateRenderButton();
       setPreviewBusy(false);
       setStatus(
         "Fichier prêt · " +
@@ -308,7 +340,7 @@
     } catch (error) {
       if (token !== loadToken) return;
       inputBuffer = null;
-      renderButton.disabled = true;
+      updateRenderButton();
       name.textContent = "Aucun fichier chargé";
       setStatus(
         formatError("Impossible de décoder ce fichier", error) +
@@ -614,8 +646,8 @@
         },
       );
       if (rendered.cancelled || token !== renderToken) {
-        if (token === renderToken)
-          setStatus("Calcul terminé en arrière-plan · résultat écarté.");
+        if (rendered.cancelled && rendered.background)
+          releaseBackgroundRender(operation, token, rendered.background);
         return;
       }
       const result = rendered.buffer;
@@ -643,7 +675,7 @@
       if (token === renderToken)
         setStatus(formatError("Échec du rendu audio", error));
     } finally {
-      if (activeRender === operation) {
+      if (activeRender === operation && !operation.backgroundPending) {
         activeRender = null;
         setBusy(false);
       }
@@ -653,8 +685,9 @@
     if (!activeRender || !activeRender.cancellable) return;
     activeRender.cancelled = true;
     cancelRenderButton.disabled = true;
+    setBusy(false);
     setStatus(
-      "Annulation demandée · le navigateur terminera le calcul avant de libérer les commandes.",
+      "Annulation demandée · les autres commandes sont disponibles. Un nouveau rendu sera possible quand le calcul en arrière-plan sera terminé.",
     );
   });
   playButton.addEventListener("click", async () => {
