@@ -7,7 +7,7 @@
     <title>Sample Sequencer — Beat Lab 808</title>
     <link rel="stylesheet" href="sequencer.css?v=b52d9481987b">
     <link rel="stylesheet" href="lab-shared.css?v=d26c630ee4ad">
-    <link rel="stylesheet" href="lab-tools.css?v=305c18f29dfa">
+    <link rel="stylesheet" href="lab-tools.css?v=701946493087">
     <link rel="stylesheet" href="mobile-compact.css?v=7ab1bf47630d">
     <link rel="stylesheet" href="interaction-accents.css?v=4427be973feb">
     <meta
@@ -39,6 +39,9 @@
       property="og:image:alt"
       content="Beat Lab 808 : cinq ateliers musicaux pour écouter, composer et transformer tes sons.">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Sample Sequencer — Beat Lab 808">
+    <meta name="twitter:description" content="Importe tes sons sur huit pistes, programme une boucle et règle le mixage et les effets avec Sample Sequencer.">
+    <meta name="twitter:image" content="https://izzyashtn.github.io/beat-lab-808/partage.png">
       <link rel="canonical" href="https://izzyashtn.github.io/beat-lab-808/sequencer.html">
   </head>
   <body data-tool="sequencer">
@@ -135,9 +138,11 @@
             <div
               class="grid"
               id="grid"
-              role="group"
+              role="grid"
               aria-label="Grille de séquençage"
               aria-describedby="grid-help"
+              aria-rowcount="9"
+              aria-colcount="17"
             ></div>
           </section>
           <div class="tip desktop-mobile-copy">
@@ -148,7 +153,7 @@
           </div>
         </section>
         <p class="foot desktop-mobile-copy">
-          Tes sons restent dans le stockage privé de ce navigateur; ils ne
+          Tes sons restent dans le stockage privé de ce navigateur ; ils ne
           sont pas envoyés à GitHub. Pour les retrouver, utilise le même
           navigateur et le même appareil. Effacer les données du site dans le
           navigateur supprime aussi ces sons et les réglages sauvegardés.
@@ -180,7 +185,7 @@
           <summary>Stockage et confidentialité</summary>
           <div class="mobile-context__content">
             <p>
-              Tes sons restent dans le stockage privé de ce navigateur; ils ne
+              Tes sons restent dans le stockage privé de ce navigateur ; ils ne
               sont pas envoyés à GitHub. Pour les retrouver, utilise le même
               navigateur et le même appareil. Effacer les données du site dans
               le navigateur supprime aussi ces sons et les réglages sauvegardés.
@@ -205,6 +210,6 @@
     </div>
     <script src="lab-core.js?v=9a82659e4759"></script>
     <script src="lab-grid.js?v=b8f8b235a083"></script>
-    <script src="sequencer.js?v=946fd2e938ad"></script>
+    <script src="sequencer.js?v=34f26371a393"></script>
   </body>
 </html>

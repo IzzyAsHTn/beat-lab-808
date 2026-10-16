@@ -25,6 +25,39 @@ for (const htmlName of fs.readdirSync(root).filter((name) => name.endsWith(".htm
     assert.equal(version, digest, `${htmlName} cache version for ${asset}`);
   }
 }
+for (const htmlName of [
+  "ateliers.html",
+  "sequencer.html",
+  "groove-mystere.html",
+  "index.html",
+  "samples.html",
+  "effects.html",
+]) {
+  const html = fs.readFileSync(path.join(root, htmlName), "utf8");
+  assert.match(html, /name="twitter:title"/, `${htmlName} Twitter title`);
+  assert.match(html, /name="twitter:description"/, `${htmlName} Twitter description`);
+  assert.match(html, /name="twitter:image"/, `${htmlName} Twitter image`);
+}
+const mobileStyles = fs.readFileSync(path.join(root, "mobile-compact.css"), "utf8");
+assert.match(mobileStyles, /\.desktop-mobile-copy[^\{]*\{\s*display:\s*none/);
+assert.match(mobileStyles, /\.mobile-context\s*\{\s*display:\s*block/);
+const sequencerHtml = fs.readFileSync(path.join(root, "sequencer.html"), "utf8");
+assert.match(sequencerHtml, /id="grid"[\s\S]*?role="grid"/);
+const sequencerScript = fs.readFileSync(path.join(root, "sequencer.js"), "utf8");
+assert.match(sequencerScript, /b\.hidden\s*=\s*hidden/);
+assert.match(sequencerScript, /cell\.hidden\s*=\s*si\s*>=\s*Number\(length\.value\)/);
+const cutterHtml = fs.readFileSync(path.join(root, "samples.html"), "utf8");
+const cutterCss = fs.readFileSync(path.join(root, "samples.css"), "utf8");
+assert.match(cutterHtml, /id="message"[\s\S]*?aria-live="polite"/);
+assert.match(cutterCss, /\.wavebox canvas\{[^}]*touch-action:none/);
+assert.match(fs.readFileSync(path.join(root, "effects.js"), "utf8"), /output\.connect\(makeOutputCompressor\(context\)\)\.connect\(context\.destination\)/);
+for (const scriptName of ["sequencer.js", "samples.js", "effects.js"]) {
+  const script = fs.readFileSync(path.join(root, scriptName), "utf8");
+  const durationCheck = script.indexOf("checkAudioFileDuration(");
+  const read = script.indexOf(".arrayBuffer()", durationCheck);
+  const decode = script.indexOf("decodeAudioData(", durationCheck);
+  assert.ok(durationCheck >= 0 && read > durationCheck && decode > read, `${scriptName} checks metadata before reading and decoding`);
+}
 await (async () => {
   let audioDuration = 121;
   class AudioProbe {
@@ -174,6 +207,7 @@ const wavScope = {
 };
 vm.runInNewContext(
   fn(cutter, "normalizationGainForPeak") +
+    fn(cutter, "exportChannelNote") +
     fn(cutter, "exportWav") +
     ";exportWav();",
   wavScope,

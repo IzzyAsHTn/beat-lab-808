@@ -299,6 +299,13 @@ button:disabled {
   text-align: center;
   font-size: 13px;
 }
+.persistence-status {
+  margin: 12px 0 0;
+  color: #f8a125;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
 .footer {
   margin: 18px 2px 0;
   color: #858c86;

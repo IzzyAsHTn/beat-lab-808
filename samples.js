@@ -24,7 +24,9 @@
     selectionStart = 0,
     selectionEnd = 0,
     dragAnchor = null,
-    raf = 0;
+    raf = 0,
+    resizeTimer = 0,
+    mediaPlaying = false;
   const fileLoad = window.BeatLabCore.latestOperation();
   const media = new Audio();
   media.preload = "auto";
@@ -191,6 +193,7 @@
     ].forEach((el) => (el.disabled = !on));
   }
   function stop() {
+    mediaPlaying = false;
     media.pause();
     try {
       media.currentTime = selectionStart;
@@ -199,6 +202,23 @@
     position.textContent = timeText(selectionStart);
     draw();
   }
+  function updatePausedPosition() {
+    const t = Math.max(selectionStart, Math.min(selectionEnd, media.currentTime));
+    position.textContent = timeText(t);
+    draw(t);
+  }
+  media.addEventListener("pause", () => {
+    if (!mediaPlaying) return;
+    mediaPlaying = false;
+    cancelAnimationFrame(raf);
+    updatePausedPosition();
+  });
+  media.addEventListener("ended", () => {
+    if (!mediaPlaying) return;
+    mediaPlaying = false;
+    cancelAnimationFrame(raf);
+    updatePausedPosition();
+  });
   function releaseCurrentAudio() {
     media.pause();
     media.removeAttribute("src");
@@ -224,7 +244,14 @@
       if (!fileLoad.current(token)) return;
       const bytes = await file.arrayBuffer();
       if (!fileLoad.current(token)) return;
-      const decoded = await ensureAudio().decodeAudioData(bytes.slice(0));
+      let decoded;
+      try {
+        decoded = await ensureAudio().decodeAudioData(bytes.slice(0));
+      } catch (error) {
+        if (error?.name && error.name !== "Error")
+          throw new Error("Le navigateur n’a pas pu décoder ce fichier audio.");
+        throw error;
+      }
       if (!fileLoad.current(token)) return;
       if (decoded.duration > 300)
         throw new Error("La durée décodée dépasse la limite de 5 minutes.");
@@ -280,9 +307,13 @@
       media.volume = Number(gainInput.value) / 100;
       media.currentTime = selectionStart;
       await media.play();
+      mediaPlaying = true;
       message.textContent = "Lecture par le lecteur audio du navigateur.";
       const tick = () => {
-        if (media.paused) return;
+        if (media.paused) {
+          updatePausedPosition();
+          return;
+        }
         const t = media.currentTime;
         if (t >= selectionEnd) {
           stop();
@@ -296,8 +327,15 @@
       };
       tick();
     } catch (e) {
-      message.textContent =
-        "Lecture bloquée par le navigateur. Ouvre cette page dans Safari ou Chrome puis réessaie.";
+      const reason =
+        e?.name === "NotAllowedError"
+          ? "Le navigateur a refusé la lecture. Appuie de nouveau sur le bouton pour l’autoriser."
+          : e?.name === "NotSupportedError"
+            ? "Ce format ne peut pas être lu par le navigateur. Essaie un fichier WAV ou MP3 compatible."
+            : e?.name === "AbortError"
+              ? "La lecture a été interrompue avant de démarrer. Réessaie."
+              : "La lecture a échoué. Vérifie le format du fichier et la sortie audio.";
+      message.textContent = reason;
     }
   }
   function makeTestTone() {
@@ -343,17 +381,27 @@
   }
   async function testOutput() {
     stop();
+    let url = "";
+    let tone;
+    const revoke = () => {
+      if (!url) return;
+      URL.revokeObjectURL(url);
+      url = "";
+    };
     try {
-      const url = URL.createObjectURL(makeTestTone()),
-        tone = new Audio(url);
+      url = URL.createObjectURL(makeTestTone());
+      tone = new Audio(url);
       tone.volume = Number(gainInput.value) / 100;
-      tone.onended = () => URL.revokeObjectURL(url);
+      tone.onended = revoke;
       await tone.play();
       message.textContent =
         "Bip test envoyé par le lecteur audio natif. Si tu ne l’entends pas, vérifie la sortie ou le volume système.";
     } catch (e) {
+      revoke();
       message.textContent =
-        "Test audio bloqué. Ouvre le fichier dans Safari ou Chrome puis réessaie.";
+        e?.name === "NotAllowedError"
+          ? "Le navigateur a refusé le bip de test. Appuie de nouveau sur le bouton pour l’autoriser."
+          : "Le bip de test n’a pas pu démarrer. Vérifie la sortie audio puis réessaie.";
     }
   }
   function normalizationGainForPeak(peak) {
@@ -419,7 +467,16 @@
     a.download = `${base}-${selectionStart.toFixed(2)}s-${selectionEnd.toFixed(2)}s.wav`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    message.textContent = "WAV exporté, crête normalisée à −1 dBFS. Tu peux l’importer dans Logic Pro.";
+    const channelNote = exportChannelNote(buffer.numberOfChannels);
+    message.textContent =
+      "WAV exporté, crête normalisée à −1 dBFS." +
+      channelNote +
+      " Tu peux l’importer dans Logic Pro.";
+  }
+  function exportChannelNote(channelCount) {
+    return channelCount > 2
+      ? ` Le fichier source a ${channelCount} canaux ; seuls les deux premiers sont conservés dans le WAV.`
+      : "";
   }
   canvas.addEventListener("keydown", (event) => {
     const direction =
@@ -484,6 +541,13 @@
     }),
   );
   drop.addEventListener("drop", (e) => loadFile(e.dataTransfer.files[0]));
-  window.addEventListener("resize", fitCanvas);
+  function scheduleCanvasFit() {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(() => {
+      resizeTimer = 0;
+      fitCanvas();
+    }, 120);
+  }
+  window.addEventListener("resize", scheduleCanvasFit);
   fitCanvas();
 })();

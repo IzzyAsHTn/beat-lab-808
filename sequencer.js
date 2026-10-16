@@ -100,16 +100,16 @@
   async function dbGet(key) {
     const d = await openDB();
     if (!d) return null;
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       try {
         const r = d
           .transaction(DB_STORE, "readonly")
           .objectStore(DB_STORE)
           .get(key);
         r.onsuccess = () => resolve(r.result || null);
-        r.onerror = () => resolve(null);
+        r.onerror = () => reject(r.error || Error("Lecture du sample impossible"));
       } catch (_) {
-        resolve(null);
+        reject(Error("Lecture du sample impossible"));
       }
     });
   }
@@ -410,7 +410,13 @@
       const ac = ensureAudio(),
         bytes = await file.arrayBuffer();
       if (!track.load.current(token)) return;
-      decoded = await ac.decodeAudioData(bytes);
+      try {
+        decoded = await ac.decodeAudioData(bytes);
+      } catch (error) {
+        if (error?.name && error.name !== "Error")
+          throw new Error("Le navigateur n’a pas pu décoder ce fichier audio.");
+        throw error;
+      }
       if (!track.load.current(token)) return;
       if (decoded.duration > 120)
         throw new Error("La durée décodée dépasse la limite de 2 minutes.");
@@ -420,14 +426,23 @@
           error.message || "Sample illisible ; le sample précédent est conservé.";
       return;
     }
+    const entry = {
+      blob: file,
+      name: file.name,
+      type: file.type || "audio/wav",
+    };
     try {
-      await track.write(() => {
-        if (track.load.current(token))
-          return dbPut(track.id, {
-            blob: file,
-            name: file.name,
-            type: file.type || "audio/wav",
-          });
+      await track.write(async () => {
+        if (!track.load.current(token)) return;
+        await dbPut(track.id, entry);
+        // A newer import can start while IndexedDB is committing this one.
+        // Reflect every successful write before the next queued write begins;
+        // a later successful import will then replace both DB and memory.
+        track.buffer = decoded;
+        track.fileName = file.name;
+        track.hasStoredSample = true;
+        applyFx(track);
+        updateLabel(track, track._label);
       });
     } catch (error) {
       if (!track.load.current(token)) return;
@@ -438,11 +453,6 @@
       return;
     }
     if (!track.load.current(token)) return;
-    track.buffer = decoded;
-    track.fileName = file.name;
-    track.hasStoredSample = true;
-    applyFx(track);
-    updateLabel(track, track._label);
     status.textContent = "Sample chargé et sauvegardé";
     persist.textContent =
       "Samples et réglages conservés automatiquement sur cet appareil.";
@@ -483,7 +493,14 @@
       const ac = ensureAudio(),
         bytes = await entry.blob.arrayBuffer();
       if (!track.load.current(token)) return false;
-      const decoded = await ac.decodeAudioData(bytes);
+      let decoded;
+      try {
+        decoded = await ac.decodeAudioData(bytes);
+      } catch (error) {
+        if (error?.name && error.name !== "Error")
+          throw new Error("Le sample enregistré n’a pas pu être décodé.");
+        throw error;
+      }
       if (!track.load.current(token)) return false;
       if (decoded.duration > 120) throw new Error("Sample trop long");
       track.buffer = decoded;
@@ -511,14 +528,20 @@
       "aria-label",
       `Grille de séquençage, ${visibleSteps} pas par piste`,
     );
-    headCells.forEach((cell, si) =>
-      cell.classList.toggle("beyond", si >= visibleSteps),
-    );
+    grid.setAttribute("aria-colcount", String(visibleSteps + 1));
+    headCells.forEach((cell, si) => {
+      const hidden = si >= visibleSteps;
+      cell.classList.toggle("beyond", hidden);
+      cell.hidden = hidden;
+    });
     cells.forEach((row, ti) =>
       row.forEach((b, si) => {
         const on = tracks[ti].steps[si];
+        const hidden = si >= visibleSteps;
         b.classList.toggle("on", on);
-        b.classList.toggle("beyond", si >= visibleSteps);
+        b.classList.toggle("beyond", hidden);
+        b.hidden = hidden;
+        b.parentElement.hidden = hidden;
         b.setAttribute("aria-pressed", String(on));
         b.setAttribute("aria-label", stepAccessibleLabel(ti, si, visibleSteps));
       }),
@@ -587,20 +610,31 @@
   }
   const head = document.createElement("div");
   head.className = "head";
+  head.setAttribute("role", "row");
+  head.setAttribute("aria-rowindex", "1");
   head.innerHTML =
-    "<div>Piste / Sample / Mixage / Effets</div>" +
+    '<div role="columnheader" aria-colindex="1">Piste / Sample / Mixage / Effets</div>' +
     Array.from(
       { length: STEP_COUNT },
-      (_, i) => "<div>" + String(i + 1).padStart(2, "0") + "</div>",
+      (_, i) =>
+        '<div role="columnheader" aria-colindex="' +
+        (i + 2) +
+        '">' +
+        String(i + 1).padStart(2, "0") +
+        "</div>",
     ).join("");
   grid.append(head);
   const headCells = [...head.children].slice(1);
   tracks.forEach((track, ti) => {
     const row = document.createElement("div");
     row.className = "track";
+    row.setAttribute("role", "row");
+    row.setAttribute("aria-rowindex", String(ti + 2));
     row.style.setProperty("--tone", track.color);
     const label = document.createElement("div");
     label.className = "tracklabel";
+    label.setAttribute("role", "rowheader");
+    label.setAttribute("aria-colindex", "1");
     const title = document.createElement("div");
     title.className = "trackname";
     title.textContent = String(ti + 1).padStart(2, "0") + " · " + track.name;
@@ -785,6 +819,11 @@
     stepRow.className = "step-row";
     row.append(stepRow);
     track.steps.forEach((on, si) => {
+      const cell = document.createElement("div");
+      cell.className = "step-cell";
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-colindex", String(si + 2));
+      cell.hidden = si >= Number(length.value);
       const b = document.createElement("button");
       b.type = "button";
       b.dataset.step = String(si + 1);
@@ -797,6 +836,7 @@
         stepAccessibleLabel(ti, si, Number(length.value) || 16),
       );
       b.setAttribute("aria-pressed", "false");
+      b.hidden = si >= Number(length.value);
       b.addEventListener("click", () => {
         track.steps[si] = !track.steps[si];
         b.classList.toggle("on", track.steps[si]);
@@ -808,7 +848,8 @@
         saveState();
       });
       cells[ti].push(b);
-      stepRow.append(b);
+      cell.append(b);
+      stepRow.append(cell);
     });
     grid.append(row);
     input.addEventListener("change", () => {
@@ -1027,9 +1068,9 @@
       : "Prêt · charge des samples pour commencer";
   }
   restore().catch((e) => {
-    if (tracks.some((t) => t.load.version() > 0)) return;
     persist.textContent =
-      "Le stockage local a rencontré une erreur; les fichiers choisis resteront disponibles pour cette session.";
-    status.textContent = "Prêt · " + e.message;
+      "Impossible de lire les samples enregistrés dans ce navigateur. Les samples déjà chargés restent disponibles pour cette session.";
+    if (tracks.every((t) => t.load.version() === 0))
+      status.textContent = "Lecture du stockage impossible · " + e.message;
   });
 })();

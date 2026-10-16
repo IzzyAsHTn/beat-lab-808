@@ -129,6 +129,9 @@
     }
     onCapability(true);
     const rendering = context.startRendering();
+    // OfflineAudioContext cannot abort startRendering(); keep its promise handled
+    // and resume it at the next checkpoint so it can finish and be collected.
+    rendering.catch(() => {});
     while (true) {
       try {
         await checkpoint;
@@ -136,7 +139,10 @@
         onCapability(false, "unsupported");
         return { buffer: await rendering, cancelled: false };
       }
-      if (operation.cancelled) return { buffer: null, cancelled: true };
+      if (operation.cancelled) {
+        await context.resume();
+        return { buffer: null, cancelled: true };
+      }
       if (nextTime + interval >= duration) {
         await context.resume();
         return { buffer: await rendering, cancelled: false };
@@ -154,12 +160,17 @@
   }
   function formatError(action, error) {
     console.error("[Beat Lab Effets] " + action, error);
+    const nativeErrors = {
+      EncodingError: "le format audio n’a pas pu être décodé",
+      NotAllowedError: "le navigateur a bloqué la lecture audio",
+      NotSupportedError: "cette fonction audio n’est pas prise en charge",
+      OperationError: "le navigateur n’a pas pu effectuer cette opération audio",
+      QuotaExceededError: "le stockage disponible est insuffisant",
+    };
     const detail =
-      error && error.message
-        ? error.message
-        : error && error.name
-          ? error.name
-          : "erreur inconnue";
+      error?.name && error.name !== "Error"
+        ? nativeErrors[error.name] || "erreur audio (" + error.name + ")"
+        : error?.message || "erreur inconnue";
     return action + " : " + detail;
   }
   const formatters = {
@@ -174,7 +185,8 @@
   };
   function updateControlValue(control) {
     const valueText = formatters[control.id](control.value);
-    $("#" + control.id + "v").textContent = valueText;
+    const output = $("#" + control.id + "v");
+    if (output) output.textContent = valueText;
     control.setAttribute("aria-valuetext", valueText);
   }
   controls.forEach((control) => {
@@ -228,7 +240,14 @@
         );
       decodeContext = new AudioContextClass();
       const bytes = await selected.arrayBuffer();
-      const decoded = await decodeContext.decodeAudioData(bytes);
+      let decoded;
+      try {
+        decoded = await decodeContext.decodeAudioData(bytes);
+      } catch (error) {
+        if (error?.name && error.name !== "Error")
+          throw new Error("Le navigateur n’a pas pu décoder ce fichier audio.");
+        throw error;
+      }
       if (token !== loadToken) return;
       if (decoded.duration > 120) {
         throw new Error(
@@ -292,6 +311,15 @@
     }
     return impulse;
   }
+  function makeOutputCompressor(context) {
+    const compressor = context.createDynamicsCompressor();
+    compressor.threshold.value = -1;
+    compressor.knee.value = 0;
+    compressor.ratio.value = 20;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.12;
+    return compressor;
+  }
   previewButton.addEventListener("click", async () => {
     if (preview) {
       stopPreview("Préécoute arrêtée.");
@@ -353,12 +381,7 @@
         distortion.connect(convolver).connect(reverbWet).connect(output);
         nodes.push(convolver, reverbWet);
       }
-      const limiter = context.createDynamicsCompressor();
-      limiter.threshold.value = -1;
-      limiter.knee.value = 0;
-      limiter.ratio.value = 20;
-      limiter.attack.value = 0.003;
-      limiter.release.value = 0.12;
+      const limiter = makeOutputCompressor(context);
       output.connect(limiter).connect(context.destination);
       nodes.push(limiter);
       preview = {
@@ -540,7 +563,7 @@
         reverbWet.gain.value = settings.reverb * 0.65;
         distortion.connect(convolver).connect(reverbWet).connect(output);
       }
-      output.connect(context.destination);
+      output.connect(makeOutputCompressor(context)).connect(context.destination);
       source.start(0);
       const rendered = await renderOfflineCancellable(
         context,
@@ -574,7 +597,7 @@
       downloadButton.disabled = false;
       const ceiling =
         peak.gain < 1
-          ? " · crête sécurisée à −1 dBFS"
+          ? " · crête normalisée à −1 dBFS"
           : " · crête sous −1 dBFS";
       setStatus(
         "Rendu traité prêt · " +

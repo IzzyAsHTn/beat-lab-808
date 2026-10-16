@@ -57,10 +57,11 @@
       steps: Array(16).fill(0),
     },
   ];
+  const INDUSTRIAL_CLAP_TIMEOUT_MS = 8000;
+  const trackById = new Map(tracks.map((track) => [track.id, track]));
   function stepAccessibleLabel(trackIndex, stepIndex) {
     const track = tracks[trackIndex];
-    const active = Boolean(track.steps[stepIndex]);
-    return `${track.label}, piste ${trackIndex + 1} sur ${tracks.length}, pas ${stepIndex + 1} sur 16, ${active ? "activé" : "désactivé"}`;
+    return `${track.label}, piste ${trackIndex + 1} sur ${tracks.length}, pas ${stepIndex + 1} sur 16`;
   }
   tracks.forEach((track) => {
     track.muted = false;
@@ -172,12 +173,14 @@
   const cells = [];
   const head = document.createElement("div");
   head.className = "step-head";
+  head.setAttribute("role", "row");
+  head.setAttribute("aria-rowindex", "1");
   head.innerHTML =
-    "<div></div>" +
+    '<div role="columnheader" aria-colindex="1">Voix</div>' +
     Array.from(
       { length: 16 },
       (_, i) =>
-        `<div class="${i % 4 === 0 ? "divider" : ""}">${String(i + 1).padStart(2, "0")}</div>`,
+        `<div role="columnheader" aria-colindex="${i + 2}" class="${i % 4 === 0 ? "divider" : ""}">${String(i + 1).padStart(2, "0")}</div>`,
     ).join("");
   grid.append(head);
   const voiceGains = {};
@@ -223,9 +226,13 @@
   tracks.forEach((track, ti) => {
     const row = document.createElement("div");
     row.className = "track";
+    row.setAttribute("role", "row");
+    row.setAttribute("aria-rowindex", String(ti + 2));
     row.style.setProperty("--tone", track.color);
     const label = document.createElement("div");
     label.className = "name";
+    label.setAttribute("role", "rowheader");
+    label.setAttribute("aria-colindex", "1");
     const voiceName = document.createElement("span");
     voiceName.className = "voice-name";
     voiceName.textContent = track.label;
@@ -287,6 +294,7 @@
     tuning.className = "tuning";
     const tune = document.createElement("input");
     tune.type = "range";
+    tune.id = `tune-control-${track.id}`;
     tune.min = "-12";
     tune.max = "12";
     tune.step = "1";
@@ -294,6 +302,8 @@
     tune.setAttribute("aria-label", `${track.label}, accordage en demi-tons`);
     const tuneOutput = document.createElement("output");
     tuneOutput.id = `tune-${track.id}`;
+    tuneOutput.htmlFor = tune.id;
+    tune.setAttribute("aria-describedby", tuneOutput.id);
     updateTuningSlider(tune);
     tuning.append(tune, tuneOutput);
     label.append(tuning);
@@ -309,6 +319,10 @@
     stepRow.className = "step-row";
     row.append(stepRow);
     track.steps.forEach((on, si) => {
+      const cell = document.createElement("div");
+      cell.className = "step-cell";
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-colindex", String(si + 2));
       const pad = document.createElement("button");
       pad.type = "button";
       pad.dataset.step = String(si + 1);
@@ -325,7 +339,8 @@
         savePattern();
       });
       cells[ti][si] = pad;
-      stepRow.append(pad);
+      cell.append(pad);
+      stepRow.append(cell);
     });
     grid.append(row);
   });
@@ -358,6 +373,8 @@
     timer = null,
     cachedNoise = null,
     clapRoomImpulse = null,
+    clapRoomNode = null,
+    clapRoomWet = null,
     industrialClapBuffer = null,
     industrialClapBufferPromise = null;
   let startVersion = 0;
@@ -371,6 +388,8 @@
       masterLimiter = null;
       cachedNoise = null;
       clapRoomImpulse = null;
+      clapRoomNode = null;
+      clapRoomWet = null;
       industrialClapBuffer = null;
       industrialClapBufferPromise = null;
     }
@@ -411,15 +430,28 @@
     clapRoomImpulse = impulse;
     return impulse;
   }
+  function fetchWithTimeout(url) {
+    const controller =
+      typeof AbortController === "function" ? new AbortController() : null;
+    let timeoutId;
+    const timeout = new Promise((resolve, reject) => {
+      timeoutId = setTimeout(() => {
+        controller?.abort();
+        reject(new Error("Le téléchargement du clap a dépassé le délai maximal."));
+      }, INDUSTRIAL_CLAP_TIMEOUT_MS);
+    });
+    const request = Promise.resolve().then(() =>
+      fetch(url, controller ? { signal: controller.signal } : undefined),
+    );
+    return Promise.race([request, timeout]).finally(() => clearTimeout(timeoutId));
+  }
   function loadIndustrialClap() {
     if (industrialClapBuffer) return Promise.resolve(industrialClapBuffer);
     if (!industrialClapBufferPromise)
-      industrialClapBufferPromise = fetch("./industrial-clap.wav")
+      industrialClapBufferPromise = fetchWithTimeout("./industrial-clap.wav")
         .then((response) => {
           if (!response.ok)
-            throw new Error(
-              `Industrial clap audio unavailable (${response.status})`,
-            );
+            throw new Error(`Le serveur a répondu avec le code ${response.status}.`);
           return response.arrayBuffer();
         })
         .then((data) => ctx.decodeAudioData(data))
@@ -428,7 +460,6 @@
           return buffer;
         })
         .catch((error) => {
-          industrialClapBufferPromise = null;
           console.warn("Clap industriel indisponible, utilisation du son synthétique.", error);
           return null;
         });
@@ -437,12 +468,8 @@
   function classic808Clap(t, track) {
     const ratio = Math.pow(2, (track.tuning || 0) / 12),
       bus = voiceOutput(track.id),
-      room = ctx.createConvolver(),
-      wet = ctx.createGain(),
+      room = getClapRoom(),
       frequency = 1450 * ratio;
-    room.buffer = clapImpulseResponse();
-    wet.gain.setValueAtTime(0.48, t);
-    room.connect(wet).connect(bus);
     [0, 0.013, 0.026, 0.039].forEach((offset, index) => {
       const source = ctx.createBufferSource(),
         filter = ctx.createBiquadFilter(),
@@ -461,6 +488,15 @@
       source.start(t + offset, Math.random() * 0.8);
       source.stop(t + offset + 0.022);
     });
+  }
+  function getClapRoom() {
+    if (clapRoomNode) return clapRoomNode;
+    clapRoomNode = ctx.createConvolver();
+    clapRoomNode.buffer = clapImpulseResponse();
+    clapRoomWet = ctx.createGain();
+    clapRoomWet.gain.value = 0.48;
+    clapRoomNode.connect(clapRoomWet).connect(voiceOutput("clap"));
+    return clapRoomNode;
   }
   function industrialClap(t, track) {
     const source = ctx.createBufferSource(),
@@ -481,7 +517,7 @@
   }
   function kick(t) {
     const industrial = kit.value === "industrial",
-      ratio = Math.pow(2, tracks[0].tuning / 12),
+      ratio = Math.pow(2, trackById.get("kick").tuning / 12),
       osc = ctx.createOscillator(),
       gain = ctx.createGain();
     osc.type = industrial ? "triangle" : "sine";
@@ -668,7 +704,7 @@
   }
   function cowbell(t) {
     const industrial = kit.value === "industrial",
-      ratio = Math.pow(2, tracks[7].tuning / 12),
+      ratio = Math.pow(2, trackById.get("cowbell").tuning / 12),
       mix = ctx.createGain(),
       tone = ctx.createBiquadFilter();
     tone.type = "bandpass";
@@ -797,10 +833,7 @@
       cells[ti].forEach((cell, si) => {
         cell.classList.remove("on");
         cell.setAttribute("aria-pressed", "false");
-        cell.setAttribute(
-          "aria-label",
-          `${track.label}, pas ${si + 1}, désactivé`,
-        );
+        cell.setAttribute("aria-label", stepAccessibleLabel(ti, si));
       });
     });
     savePattern();

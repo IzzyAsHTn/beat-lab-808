@@ -3,6 +3,7 @@ const statusLine = document.getElementById("status");
 const roundLabel = document.getElementById("roundLabel");
 const startButton = document.getElementById("start");
 const stopButton = document.getElementById("stopGame");
+const persistenceStatus = document.getElementById("persist");
 const session = window.BeatLabCore.latestOperation();
 const flashVersions = pads.map(() => 0);
 const activeSounds = new Set();
@@ -56,15 +57,24 @@ const bestPatternsByMode = scores.bestPatternsByMode;
 function saveScores() {
   try {
     localStorage.setItem(SCORE_KEY, JSON.stringify({ bestByMode, bestPatternsByMode }));
+    persistenceStatus.hidden = true;
+    persistenceStatus.textContent = "";
+    return true;
   } catch (error) {
-    updateStatus("Meilleur score conservé pour cette session, mais le navigateur ne permet pas son enregistrement.");
+    persistenceStatus.textContent =
+      "Meilleur score conservé pour cette session, mais le navigateur ne permet pas son enregistrement.";
+    persistenceStatus.hidden = false;
+    return false;
   }
 }
 let mode = "drums";
 let gameMode = "simon";
 let audioContext;
+let monitoredAudioContext = null;
+let audioContextHasRun = false;
 let limiterContext;
 let masterLimiter;
+let pointerStartedGame = false;
 let sequence = [];
 let inputIndex = 0;
 let completedPatterns = 0;
@@ -114,10 +124,39 @@ function updateRoundLabel() {
     (bestByMode[mode] > 1 ? "s" : "");
 }
 async function ensureAudioReady() {
-  audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+  if (!audioContext || audioContext.state === "closed") {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    monitoredAudioContext = null;
+    audioContextHasRun = audioContext.state === "running";
+  }
+  watchAudioContext(audioContext);
   if (audioContext.state !== "running") await audioContext.resume();
   if (audioContext.state !== "running")
     throw new Error("AudioContext did not enter running state");
+  audioContextHasRun = true;
+}
+function hasActiveGame() {
+  return ["starting", "playback", "input", "between"].includes(phase);
+}
+function stopForInterruption(message) {
+  if (!hasActiveGame()) return;
+  stopGame();
+  updateStatus(message);
+}
+function watchAudioContext(context) {
+  if (monitoredAudioContext === context) return;
+  monitoredAudioContext = context;
+  audioContextHasRun = context.state === "running";
+  context.addEventListener("statechange", () => {
+    if (context.state === "running") {
+      audioContextHasRun = true;
+      return;
+    }
+    if (context === audioContext && audioContextHasRun)
+      stopForInterruption(
+        "Partie arrêtée après une interruption audio. Clique sur « Lancer la partie » pour reprendre.",
+      );
+  });
 }
 function renderMode() {
   padSets[mode].forEach((info, id) => {
@@ -222,17 +261,17 @@ gameModeButtons.forEach((button) =>
   button.addEventListener("click", () => chooseGameMode(button.dataset.mode)),
 );
 
-function makeSound(id, token = session.version()) {
+function makeSound(id, token = session.version(), when = null) {
   audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
   const ctx = audioContext;
   if (ctx.state === "running") {
-    scheduleSound(id, ctx);
+    scheduleSound(id, ctx, when);
   } else {
     void ctx
       .resume()
       .then(() => {
         if (ctx.state === "running" && session.current(token))
-          scheduleSound(id, ctx);
+          scheduleSound(id, ctx, when);
       })
       .catch(() => {
         if (!session.current(token)) return;
@@ -248,8 +287,11 @@ function trackSound(node) {
   node.onended = () => activeSounds.delete(node);
   return node;
 }
-function scheduleSound(id, ctx) {
-  const now = ctx.currentTime;
+function scheduleSound(id, ctx, when = null) {
+  const now = Math.max(
+    ctx.currentTime,
+    Number.isFinite(when) ? when : ctx.currentTime,
+  );
   const output = getMasterLimiter(ctx);
   if (mode === "notes") {
     const osc = trackSound(ctx.createOscillator()),
@@ -332,16 +374,38 @@ function scheduleSound(id, ctx) {
   }
 }
 
-async function flash(id, duration = 190, token = session.version()) {
+function flash(id, duration = 190, token = session.version(), when = null) {
   if (!session.current(token)) return;
   const pad = pads[id],
     version = ++flashVersions[id],
-    showFlash = !prefersReducedMotion();
-  if (showFlash) pad.classList.add("is-lit");
-  makeSound(id, token);
-  await wait(duration);
-  if (showFlash && flashVersions[id] === version)
-    pad.classList.remove("is-lit");
+    showFlash = !prefersReducedMotion(),
+    ctx = typeof audioContext === "undefined" ? null : audioContext,
+    audioTime = ctx
+      ? Math.max(ctx.currentTime, Number.isFinite(when) ? when : ctx.currentTime)
+      : null,
+    delay = ctx ? Math.max(0, (audioTime - ctx.currentTime) * 1000) : 0;
+  makeSound(id, token, audioTime);
+  if (!showFlash) return Promise.resolve();
+  if (delay < 16) pad.classList.add("is-lit");
+  const light = () => {
+    if (!session.current(token) || flashVersions[id] !== version) return;
+    pad.classList.add("is-lit");
+    setTimeout(() => {
+      if (session.current(token) && flashVersions[id] === version)
+        pad.classList.remove("is-lit");
+    }, duration);
+  };
+  if (delay < 16)
+    return wait(duration).then(() => {
+      if (session.current(token) && flashVersions[id] === version)
+        pad.classList.remove("is-lit");
+    });
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      light();
+      setTimeout(resolve, duration);
+    }, delay);
+  });
 }
 
 async function playSequence(token = session.version()) {
@@ -365,12 +429,23 @@ async function playSequence(token = session.version()) {
           "</strong>",
   );
   await wait(450);
-  for (const id of sequence) {
-    if (!session.current(token) || phase !== "playback") return;
-    await flash(id, 190, token);
-    if (!session.current(token)) return;
-    await wait(tempo - 190);
+  const ctx = audioContext;
+  if (!ctx || ctx.state !== "running") return;
+  const firstSoundAt = ctx.currentTime + 0.05,
+    roundDuration = (sequence.length * tempo) / 1000,
+    finishAt = firstSoundAt + roundDuration;
+  sequence.forEach((id, index) =>
+    flash(id, 190, token, firstSoundAt + (index * tempo) / 1000),
+  );
+  while (
+    session.current(token) &&
+    phase === "playback" &&
+    ctx.state === "running" &&
+    ctx.currentTime < finishAt
+  ) {
+    await wait(Math.min(50, Math.max(1, (finishAt - ctx.currentTime) * 1000)));
   }
+  if (ctx.state !== "running") return;
   if (!session.current(token)) return;
   phase = "input";
   inputIndex = 0;
@@ -472,6 +547,10 @@ function stopGame() {
   keyboardGame = false;
 }
 stopButton.addEventListener("click", stopGame);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden)
+    stopForInterruption("Partie arrêtée quand l’onglet passe en arrière-plan.");
+});
 
 pads.forEach((pad, id) =>
   pad.addEventListener("click", async () => {
@@ -518,7 +597,15 @@ pads.forEach((pad, id) =>
   }),
 );
 
-startButton.addEventListener("click", async (event) => {
+startButton.addEventListener("pointerdown", () => {
+  pointerStartedGame = true;
+});
+startButton.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") pointerStartedGame = false;
+});
+startButton.addEventListener("click", async () => {
+  const activatedByPointer = pointerStartedGame;
+  pointerStartedGame = false;
   if (
     phase === "starting" ||
     phase === "playback" ||
@@ -527,7 +614,7 @@ startButton.addEventListener("click", async (event) => {
   )
     return;
   const token = session.begin();
-  keyboardGame = event.detail === 0;
+  keyboardGame = !activatedByPointer;
   phase = "starting";
   startButton.disabled = true;
   stopButton.disabled = false;

@@ -115,16 +115,30 @@ await test("Both sequencers stop after an audio-context interruption", async () 
     assert.equal(scope.playing, false);
   }
 });
-await test("Clear and remove actions honor their confirmation dialog", async () => {
+await test("808 step names keep track position and do not duplicate toggle state", async () => {
+  const stepLabel = fn(drums, "stepAccessibleLabel");
+  const label = vm.runInNewContext(
+    "const tracks=[{label:'KICK',steps:[false]}];" +
+      stepLabel +
+      ";stepAccessibleLabel(0,0)",
+  );
+  assert.equal(label, "KICK, piste 1 sur 1, pas 1 sur 16");
+  assert.doesNotMatch(label, /activé|désactivé/);
+});
+await test("Clear and remove actions honor their confirmation dialog and restore complete labels", async () => {
   const steps = [true, true];
+  const attributes = [];
   const drumScope = {
     window: { confirm: () => false },
     tracks: [{ steps }],
-    cells: [[...steps].map(() => ({ classList: { remove() {} }, setAttribute() {} }))],
+    cells: [[...steps].map(() => ({
+      classList: { remove() {} },
+      setAttribute(name, value) { attributes.push([name, value]); },
+    }))],
     status: { textContent: "" },
     saves: 0,
   };
-  drumScope.stepAccessibleLabel = () => "Kick, piste 1 sur 1, pas 1 sur 16, désactivé";
+  drumScope.stepAccessibleLabel = (track, step) => `KICK, piste 1 sur 8, pas ${step + 1} sur 16`;
   drumScope.savePattern = () => { drumScope.saves++; };
   runCapturedHandler(
     drums,
@@ -137,6 +151,11 @@ await test("Clear and remove actions honor their confirmation dialog", async () 
   drumScope.capturedHandler();
   assert.deepEqual(steps, [0, 0]);
   assert.equal(drumScope.saves, 1);
+  assert.deepEqual(attributes.filter(([name]) => name === "aria-label").map(([, value]) => value), [
+    "KICK, piste 1 sur 8, pas 1 sur 16",
+    "KICK, piste 1 sur 8, pas 2 sur 16",
+  ]);
+  assert.deepEqual(attributes.filter(([name]) => name === "aria-pressed").map(([, value]) => value), ["false", "false"]);
 
   const track = { buffer: { id: "sample" }, hasStoredSample: true, fileName: "loop.wav" };
   let removals = 0;
@@ -229,6 +248,22 @@ const file = (id, arrayBuffer = async () => ({ id })) => ({
   size: 100,
   arrayBuffer,
 });
+await test("IndexedDB sample reads reject errors instead of masquerading as missing samples", async () => {
+  const request = {};
+  const db = {
+    transaction() {
+      return { objectStore: () => ({ get: () => request }) };
+    },
+  };
+  const pending = vm.runInNewContext(
+    "async " + fn(seq, "dbGet") + ";dbGet('track-0')",
+    { openDB: async () => db, DB_STORE: "samples" },
+  );
+  await tick();
+  request.error = Error("read failed");
+  request.onerror();
+  await assert.rejects(pending, /read failed/);
+});
 await test("The shared queue preserves write order and recovers after failure", async () => {
   const q = core.serialQueue(),
     first = deferred(),
@@ -294,6 +329,35 @@ await test("A slow earlier storage write cannot become the final saved sample", 
   await Promise.all([a, b]);
   assert.equal(s.track.fileName, "B.wav");
   assert.deepEqual(s.writes, ["A.wav", "B.wav"]);
+});
+await test("A newer import that fails during an earlier write leaves memory and storage aligned", async () => {
+  const s = trackFixture(),
+    writeStarted = deferred(),
+    finishWrite = deferred();
+  let storedSample = "previous.wav";
+  s.dbPut = async (id, entry) => {
+    if (entry.name === "A.wav") {
+      writeStarted.resolve();
+      await finishWrite.promise;
+    }
+    storedSample = entry.name;
+    s.writes.push(entry.name);
+  };
+  s.ensureAudio = () => ({
+    decodeAudioData: async (bytes) => {
+      if (bytes.id === "B") throw Error("decode failed");
+      return { id: bytes.id };
+    },
+  });
+  const first = s.importSample(s.track, file("A"));
+  await writeStarted.promise;
+  await s.importSample(s.track, file("B"));
+  finishWrite.resolve();
+  await first;
+  assert.equal(storedSample, "A.wav");
+  assert.equal(s.track.fileName, "A.wav");
+  assert.equal(s.track.buffer.id, "A");
+  assert.deepEqual(s.writes, ["A.wav"]);
 });
 await test("A failed sample write preserves the previous in-memory sample", async () => {
   const s = trackFixture();
@@ -407,6 +471,84 @@ await test("Industrial clap uses the synthesized voice when its sample is absent
   vm.runInNewContext(fn(source("index"), "schedule") + ";schedule(0,0.1);", scope);
   assert.deepEqual(hits, ["fallback"]);
 });
+await test("Industrial clap download aborts at its deadline", async () => {
+  let onTimeout, delay, aborted = 0, cleared = 0, requestOptions;
+  class AbortControllerProbe {
+    constructor() { this.signal = {}; }
+    abort() { aborted++; }
+  }
+  const scope = {
+    AbortController: AbortControllerProbe,
+    INDUSTRIAL_CLAP_TIMEOUT_MS: 8000,
+    setTimeout(callback, ms) { onTimeout = callback; delay = ms; return 7; },
+    clearTimeout(id) { if (id === 7) cleared++; },
+    fetch(url, options) {
+      assert.equal(url, "./industrial-clap.wav");
+      requestOptions = options;
+      return new Promise(() => {});
+    },
+  };
+  const pending = vm.runInNewContext(
+    fn(drums, "fetchWithTimeout") + ";fetchWithTimeout('./industrial-clap.wav')",
+    scope,
+  );
+  await tick();
+  assert.equal(delay, 8000);
+  onTimeout();
+  await assert.rejects(pending, /délai maximal/);
+  assert.ok(requestOptions.signal);
+  assert.equal(aborted, 1);
+  assert.equal(cleared, 1);
+});
+await test("A failed industrial clap load is cached instead of fetched on every start", async () => {
+  let requests = 0;
+  const scope = {
+    industrialClapBuffer: null,
+    industrialClapBufferPromise: null,
+    fetchWithTimeout() { requests++; return Promise.reject(new Error("offline")); },
+    console: { warn() {} },
+  };
+  bind(scope, "async " + fn(drums, "loadIndustrialClap") + ";");
+  assert.equal(await scope.loadIndustrialClap(), null);
+  assert.equal(await scope.loadIndustrialClap(), null);
+  assert.equal(requests, 1);
+});
+await test("The 808 reuses its clap reverb node and looks up voices by ID", async () => {
+  let convolvers = 0, gains = 0;
+  const scope = {
+    ctx: {
+      createConvolver() { convolvers++; return { connect(next) { return next; }, buffer: null }; },
+      createGain() { gains++; return { gain: { value: 0 }, connect(next) { return next; } }; },
+    },
+    clapRoomNode: null, clapRoomWet: null,
+    clapImpulseResponse: () => ({ id: "impulse" }),
+    voiceOutput: () => ({}),
+  };
+  bind(scope, fn(drums, "getClapRoom") + ";const first=getClapRoom();const second=getClapRoom();first===second;");
+  assert.equal(convolvers, 1);
+  assert.equal(gains, 1);
+  assert.doesNotMatch(drums, /tracks\[(?:0|7)\]\.tuning/);
+  assert.match(drums, /aria-describedby", tuneOutput\.id/);
+});
+await test("808 playback starts with its synthesized clap when loading times out", async () => {
+  const audio = { currentTime: 4, resume: async () => {} };
+  const playButton = { disabled: false, textContent: "▶ Jouer" };
+  const scope = {
+    playing: false, starting: false, startVersion: 0,
+    playButton, kit: { value: "industrial" }, industrialClapBuffer: null,
+    status: { textContent: "" },
+    ensureAudio: () => audio,
+    loadIndustrialClap: async () => null,
+    ctx: audio, step: 0, nextTime: 0, timer: null, interval: 25,
+    scheduler() {}, setInterval: () => 12,
+  };
+  await vm.runInNewContext("async " + fn(drums, "start") + ";start()", scope);
+  assert.equal(scope.playing, true);
+  assert.equal(scope.starting, false);
+  assert.equal(playButton.disabled, false);
+  assert.equal(playButton.textContent, "■ Arrêter");
+  assert.match(scope.status.textContent, /clap synthétique de secours/);
+});
 await test("Groove scores restore valid values and default safely on corrupt storage", async () => {
   const grooveSource = source("groove-mystere");
   const read = fn(grooveSource, "readScores");
@@ -435,12 +577,115 @@ await test("Groove scores restore valid values and default safely on corrupt sto
     {
       bestByMode: { drums: 3, notes: 1 },
       bestPatternsByMode: { drums: 2, notes: 0 },
+      persistenceStatus: { hidden: false, textContent: "" },
       localStorage: { setItem: (key, value) => (persisted = key + ":" + value) },
       updateStatus() {},
     },
   );
   assert.match(persisted, /^scores:/);
   assert.equal(JSON.parse(persisted.slice(persisted.indexOf(":") + 1)).bestByMode.drums, 3);
+});
+await test("Groove score-save errors stay visible beside later gameplay messages", async () => {
+  const status = { hidden: true, textContent: "" };
+  const save = fn(source("groove-mystere"), "saveScores");
+  const saved = vm.runInNewContext(
+    'const SCORE_KEY="scores";' + save + ";saveScores();",
+    {
+      bestByMode: { drums: 4, notes: 0 },
+      bestPatternsByMode: { drums: 0, notes: 0 },
+      persistenceStatus: status,
+      localStorage: { setItem() { throw Error("storage denied"); } },
+    },
+  );
+  let gameMessage = "Bien joué ! Le groove s'allonge…";
+  assert.equal(saved, false);
+  assert.equal(gameMessage, "Bien joué ! Le groove s'allonge…");
+  assert.equal(status.hidden, false);
+  assert.match(status.textContent, /Meilleur score conservé pour cette session/);
+  const html = fs.readFileSync(path.join(root, "groove-mystere.html"), "utf8");
+  assert.match(html, /id="persist"[^>]*role="status"[^>]*aria-live="polite"[^>]*hidden/);
+  gameMessage = "Motif retrouvé ! Un nouveau motif arrive…";
+  assert.match(status.textContent, /enregistrement/);
+});
+await test("Groove instructions and pad names follow the selected modes", async () => {
+  const padNames = ["Grosse caisse", "Caisse claire", "Charleston", "Clap"];
+  const aria = ["Grosse caisse", "Caisse claire", "Charleston", "Clap"];
+  const pads = Array.from({ length: 4 }, () => {
+    const children = { ".glyph": { textContent: "" }, ".name": { textContent: "" } };
+    return {
+      querySelector: (selector) => children[selector],
+      children,
+      attributes: {},
+      setAttribute(name, value) { this.attributes[name] = value; },
+    };
+  });
+  const makeButtons = (modes) => modes.map((mode) => ({
+    dataset: { mode }, attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+  }));
+  const padsGroup = { setAttribute(name, value) { this[name] = value; } };
+  const scope = {
+    pads,
+    padSets: {
+      drums: padNames.map((name, i) => ({ name, glyph: "D" + i, aria: aria[i] })),
+      notes: ["Sol grave", "Do", "Mi", "Sol aigu"].map((name, i) => ({ name, glyph: "N" + i, aria: "Note " + name })),
+    },
+    soundModeButtons: makeButtons(["drums", "notes"]),
+    gameModeButtons: makeButtons(["simon", "pattern"]),
+    mode: "notes", gameMode: "pattern",
+    gameModeTitle: { textContent: "" }, howto: { textContent: "" },
+    updateRoundLabel() {},
+    document: { querySelector: () => padsGroup },
+  };
+  const render = fn(source("groove-mystere"), "renderMode");
+  vm.runInNewContext(render + ";renderMode()", scope);
+  assert.deepEqual(pads.map((pad) => pad.children[".name"].textContent), ["Sol grave", "Do", "Mi", "Sol aigu"]);
+  assert.deepEqual(pads.map((pad) => pad.attributes["aria-label"]), [
+    "Note Sol grave · raccourci clavier 1", "Note Do · raccourci clavier 2",
+    "Note Mi · raccourci clavier 3", "Note Sol aigu · raccourci clavier 4",
+  ]);
+  assert.equal(scope.gameModeTitle.textContent, "Motif mystère");
+  assert.match(scope.howto.textContent, /nouveau motif de 4 notes/);
+  scope.gameMode = "simon";
+  vm.runInNewContext("renderMode()", scope);
+  assert.equal(scope.gameModeTitle.textContent, "Séquence musicale");
+  assert.match(scope.howto.textContent, /Chaque tour ajoute une note/);
+  const html = fs.readFileSync(path.join(root, "groove-mystere.html"), "utf8");
+  assert.match(html, /clique sur « Lancer la partie »/);
+  assert.match(html, /Clique sur « Lancer la partie » pour démarrer le son/);
+  assert.doesNotMatch(html, /bouton de lecture de l’atelier/);
+});
+await test("Groove stops when the tab is hidden or its active audio context is interrupted", async () => {
+  const gameText = source("groove-mystere");
+  const hiddenMessages = [];
+  const hiddenScope = {
+    document: { hidden: true },
+    stopForInterruption(message) { hiddenMessages.push(message); },
+  };
+  runCapturedHandler(
+    gameText,
+    'document.addEventListener("visibilitychange", () => {',
+    hiddenScope,
+  );
+  assert.match(hiddenMessages[0], /arrière-plan/);
+
+  let onStateChange;
+  const context = {
+    state: "running",
+    addEventListener(name, callback) { if (name === "statechange") onStateChange = callback; },
+  };
+  let interruptionMessage = "";
+  const interruptedScope = {
+    audioContext: context,
+    monitoredAudioContext: null,
+    audioContextHasRun: false,
+    phase: "input",
+    stopForInterruption(message) { interruptionMessage = message; },
+  };
+  vm.runInNewContext(fn(gameText, "watchAudioContext") + ";watchAudioContext(audioContext)", interruptedScope);
+  context.state = "suspended";
+  onStateChange();
+  assert.match(interruptionMessage, /interruption audio/);
 });
 await test("Groove number keys activate pads without taking over text fields", async () => {
   const src = source("groove-mystere");
@@ -493,11 +738,18 @@ await test("Keyboard waveform boundary edits preserve the minimum selection", as
 await test("Effects rendering can stop at a scheduled offline checkpoint", async () => {
   const checkpoint = deferred();
   const render = deferred();
+  let resumeCalls = 0,
+    renderSettled = false;
+  render.promise.then(() => { renderSettled = true; });
   const context = {
     length: 48000 * 3,
     sampleRate: 48000,
     suspend() { return checkpoint.promise; },
-    resume() { throw Error("A cancelled render must remain suspended"); },
+    resume() {
+      resumeCalls++;
+      render.resolve({ id: "discarded" });
+      return Promise.resolve();
+    },
     startRendering() { return render.promise; },
   };
   const operation = { cancelled: false };
@@ -513,6 +765,9 @@ await test("Effects rendering can stop at a scheduled offline checkpoint", async
   checkpoint.resolve();
   const outcome = await task;
   assert.equal(outcome.cancelled, true);
+  await render.promise;
+  assert.equal(resumeCalls, 1);
+  assert.equal(renderSettled, true);
 });
 await test("Effects render reports when its browser cannot cancel offline work", async () => {
   const context = {
@@ -560,6 +815,79 @@ await test("Effects sliders associate their outputs and expose formatted accessi
     assert.equal(output.textContent, text);
     assert.equal(control.attributes["aria-valuetext"], text);
   }
+});
+await test("Effects control output is optional and compressor settings are shared", async () => {
+  const control = {
+    id: "cut",
+    value: "18000",
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+  };
+  bind(
+    { control, $: () => null, formatters: { cut: () => "18 kHz" } },
+    fn(source("effects"), "updateControlValue") + ";updateControlValue(control);",
+  );
+  assert.equal(control.attributes["aria-valuetext"], "18 kHz");
+  const compressor = {
+    threshold: { value: 0 }, knee: { value: 0 }, ratio: { value: 0 },
+    attack: { value: 0 }, release: { value: 0 },
+  };
+  const created = vm.runInNewContext(
+    fn(source("effects"), "makeOutputCompressor") + ";makeOutputCompressor(context);",
+    { context: { createDynamicsCompressor: () => compressor } },
+  );
+  assert.equal(created.threshold.value, -1);
+  assert.equal(created.ratio.value, 20);
+  assert.equal(created.attack.value, 0.003);
+  assert.equal(created.release.value, 0.12);
+});
+await test("The cutter revokes a test-tone URL when playback is rejected", async () => {
+  const revoked = [];
+  class AudioProbe {
+    constructor(url) { this.url = url; }
+    async play() { throw Object.assign(new Error("denied"), { name: "NotAllowedError" }); }
+  }
+  const scope = {
+    stop() {}, makeTestTone: () => new Blob(["tone"]), gainInput: { value: "70" },
+    message: { textContent: "" }, Audio: AudioProbe,
+    URL: { createObjectURL: () => "blob:test", revokeObjectURL: (url) => revoked.push(url) },
+  };
+  bind(scope, "async " + fn(cut, "testOutput") + ";testOutput()");
+  await tick();
+  await tick();
+  assert.deepEqual(revoked, ["blob:test"]);
+  assert.match(scope.message.textContent, /Le navigateur a refusé/);
+});
+await test("The cutter debounces waveform resizing and reports discarded channels", async () => {
+  const timers = new Map();
+  let nextId = 0, fits = 0, clears = 0;
+  const scope = {
+    resizeTimer: 0,
+    fitCanvas() { fits++; },
+    window: {
+      clearTimeout(id) { if (timers.delete(id)) clears++; },
+      setTimeout(callback, delay) { assert.equal(delay, 120); timers.set(++nextId, callback); return nextId; },
+    },
+  };
+  bind(scope, fn(cut, "scheduleCanvasFit") + ";scheduleCanvasFit();scheduleCanvasFit();scheduleCanvasFit();");
+  assert.equal(clears, 2);
+  assert.equal(timers.size, 1);
+  timers.values().next().value();
+  assert.equal(fits, 1);
+  assert.match(vm.runInNewContext(fn(cut, "exportChannelNote") + ";exportChannelNote(4);"), /seuls les deux premiers/);
+  assert.equal(vm.runInNewContext(fn(cut, "exportChannelNote") + ";exportChannelNote(2);"), "");
+});
+await test("The cutter refreshes the playhead when audio pauses before selection end", async () => {
+  const draws = [], scope = {
+    selectionStart: 0, selectionEnd: 8,
+    media: { currentTime: 3.25 },
+    position: { textContent: "" },
+    timeText: (value) => value.toFixed(2),
+    draw: (value) => draws.push(value),
+  };
+  vm.runInNewContext(fn(cut, "updatePausedPosition") + ";updatePausedPosition();", scope);
+  assert.equal(scope.position.textContent, "3.25");
+  assert.deepEqual(draws, [3.25]);
 });
 await test("Groove Mystere routes every synthesized voice through one master limiter", async () => {
   const edges = [];
@@ -617,6 +945,36 @@ await test("Groove Mystere routes every synthesized voice through one master lim
   assert.equal(limiter.release.value, 0.12);
   assert.deepEqual(edges.filter(([, target]) => target === destination), [[limiter, destination]]);
   assert.ok(edges.some(([, target]) => target === limiter));
+});
+await test("Groove notes are scheduled against the Web Audio clock", async () => {
+  const starts = [], stops = [], destination = {};
+  const param = () => ({
+    value: 0,
+    setValueAtTime(value) { this.value = value; },
+    exponentialRampToValueAtTime(value) { this.value = value; },
+  });
+  const node = () => ({
+    frequency: param(), gain: param(), Q: param(),
+    connect(next) { return next; },
+    start(time) { starts.push(time); },
+    stop(time) { stops.push(time); },
+  });
+  const context = {
+    currentTime: 2,
+    createOscillator: node,
+    createBiquadFilter: node,
+    createGain: node,
+  };
+  vm.runInNewContext(
+    fn(game, "scheduleSound") + ";scheduleSound(0,context,2.5);",
+    { mode: "notes", noteFrequencies: [440], getMasterLimiter: () => destination, trackSound: (value) => value, context },
+  );
+  assert.deepEqual(starts, [2.5]);
+  assert.deepEqual(stops, [2.85]);
+  assert.match(fn(game, "playSequence"), /ctx\.currentTime/);
+  assert.match(fn(game, "playSequence"), /sequence\.forEach/);
+  assert.doesNotMatch(game, /event\.detail\s*===\s*0/);
+  assert.match(game, /startButton\.addEventListener\("pointerdown"/);
 });
 await test("Groove Mystere skips pad flashes when reduced motion is requested", async () => {
   for (const reduce of [true, false]) {
@@ -1046,6 +1404,7 @@ function gameFixture() {
     pads,
     flashVersions: [0, 0, 0, 0],
     activeSounds: new Set(),
+    audioContext: { state: "running", currentTime: 0 },
     document: { body: {}, activeElement: {} },
     startButton: { focus() {} },
     stopButton: {},
