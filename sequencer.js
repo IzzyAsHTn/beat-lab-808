@@ -10,12 +10,12 @@
   const defs = [
     ["Kick", "#d8f36a"],
     ["Snare", "#ff8058"],
-    ["Clap", "#bd91fa"],
+    ["Clap", "#a87cff"],
     ["Charley fermé", "#76caff"],
     ["Percussion 1", "#f0bd62"],
-    ["Percussion 2", "#ed8fc4"],
-    ["Guitare / Texture 1", "#86d6a1"],
-    ["Guitare / Texture 2", "#e5d87a"],
+    ["Percussion 2", "#ff6b9a"],
+    ["Guitare / Texture 1", "#f8a125"],
+    ["Guitare / Texture 2", "#62d6c0"],
   ];
   const FX_RANGES = Object.freeze({
     filter: [500, 18000],

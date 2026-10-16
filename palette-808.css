@@ -47,15 +47,7 @@ body[data-tool="drums"] .pad.on {
   box-shadow: 0 0 14px color-mix(in srgb, var(--tone, #f1f827) 32%, transparent);
 }
 
-/* Les voix reprennent les cinq teintes de la palette sans changer la grille. */
-body[data-tool="drums"] .track:nth-child(2) { --tone: #f1f827 !important; }
-body[data-tool="drums"] .track:nth-child(3) { --tone: #e72e2e !important; }
-body[data-tool="drums"] .track:nth-child(4) { --tone: #f8a125 !important; }
-body[data-tool="drums"] .track:nth-child(5) { --tone: #ffffff !important; }
-body[data-tool="drums"] .track:nth-child(6) { --tone: #f8a125 !important; }
-body[data-tool="drums"] .track:nth-child(7) { --tone: #e72e2e !important; }
-body[data-tool="drums"] .track:nth-child(8) { --tone: #f1f827 !important; }
-body[data-tool="drums"] .track:nth-child(9) { --tone: #ffffff !important; }
+/* Les pas actifs reprennent les huit couleurs du Sample Sequencer. */
 
 body[data-tool="drums"] .grid.keyboard-navigation .pad:focus,
 body[data-tool="drums"] :is(a, button, input, select, summary, [tabindex="0"]):focus-visible {
