@@ -438,6 +438,13 @@
     return true;
   }
 
+  function sampleRetentionNotice(track) {
+    if (track.buffer) return "Le sample précédent est conservé.";
+    if (track.hasStoredSample)
+      return "Le sample sauvegardé reste dans le stockage du navigateur.";
+    return "Aucun sample n’est chargé sur cette piste.";
+  }
+
   async function importSample(track, file) {
     if (track.removing) return;
     const requestId = ++track.importSequence,
@@ -451,7 +458,7 @@
         message: error.message || "fichier audio invalide",
       };
       status.textContent =
-        `Import de ${file.name} impossible : ${track.latestImportFailure.message} Le sample déjà sauvegardé est conservé.`;
+        `Import de ${file.name} impossible : ${track.latestImportFailure.message} ${sampleRetentionNotice(track)}`;
       return;
     }
     stop();
@@ -484,7 +491,7 @@
           message: error.message || "sample illisible",
         };
         status.textContent =
-          `Import de ${file.name} impossible : ${track.latestImportFailure.message} Le sample déjà sauvegardé est conservé.`;
+          `Import de ${file.name} impossible : ${track.latestImportFailure.message} ${sampleRetentionNotice(track)}`;
       }
       return;
     }
@@ -499,6 +506,7 @@
     track.load.begin();
     try {
       await track.write(async () => {
+        // Obsolete writes stay silent so they cannot replace the current status.
         if (
           storageEpoch !== track.storageEpoch ||
           requestId < track.committedImportSequence
@@ -523,9 +531,9 @@
       )
         return;
       status.textContent =
-        `Enregistrement de ${file.name} impossible ; le sample précédent est conservé.`;
+        `Enregistrement de ${file.name} impossible. ${sampleRetentionNotice(track)}`;
       persist.textContent =
-        `Le navigateur n’a pas pu enregistrer ${file.name}. Le sample précédent est conservé.`;
+        `Le navigateur n’a pas pu enregistrer ${file.name}. ${sampleRetentionNotice(track)}`;
       return;
     }
     if (
@@ -583,6 +591,9 @@
   async function restoreSample(track, entry, token) {
     if (!entry || !track.load.current(token)) return false;
     track.hasStoredSample = true;
+    const storedName =
+      entry.name || entry.blob?.name || track.fileName || "sample sauvegardé";
+    track.fileName = storedName;
     try {
       if (!entry.blob) throw Error("Le fichier sauvegardé est incomplet.");
       core.checkAudioFile(entry.blob);
@@ -602,13 +613,13 @@
       if (!track.load.current(token)) return false;
       if (decoded.duration > 120) throw new Error("Sample trop long");
       track.buffer = decoded;
-      track.fileName = entry.name || "sample sauvegardé";
+      track.fileName = storedName;
       updateLabel(track, track._label);
       applyFx(track);
       return true;
     } catch (error) {
       if (track.load.current(token)) {
-        track.fileName = (entry.name || "sample") + " · impossible à restaurer";
+        track.fileName = storedName + " · impossible à restaurer";
         updateLabel(track, track._label);
       }
       return false;
@@ -1087,6 +1098,7 @@
   swing.addEventListener("change", saveState);
   async function restore() {
     const versions = tracks.map((t) => t.load.version());
+    const imports = tracks.map((t) => t.importSequence);
     let saved = {};
     try {
       saved = JSON.parse(localStorage.getItem(STATE_KEY) || "{}") || {};
@@ -1151,7 +1163,11 @@
     });
     let db = await openDB();
     if (!db) {
-      if (tracks.some((t, i) => t.load.version() !== versions[i])) return;
+      if (
+        tracks.some((t, i) =>
+          t.load.version() !== versions[i] || t.importSequence !== imports[i],
+        )
+      ) return;
       persist.textContent =
         "IndexedDB indisponible : les réglages sont mémorisés, mais les samples ne peuvent pas être conservés entre les pages.";
       status.textContent = "Stockage des samples indisponible";
@@ -1169,14 +1185,29 @@
         return restoreSample(t, entries[i].value, versions[i]);
       }),
     );
-    if (tracks.some((t, i) => t.load.version() !== versions[i])) return;
+    if (
+      tracks.some((t, i) =>
+        t.load.version() !== versions[i] || t.importSequence !== imports[i],
+      )
+    ) return;
     const restored = results.filter(Boolean).length;
-    if (failedReads.length) {
+    const failedRestores = tracks
+      .filter((t, i) =>
+        entries[i].status === "fulfilled" && entries[i].value && !results[i],
+      )
+      .map((t) => t.name);
+    if (failedReads.length || failedRestores.length) {
+      const failures = [
+        failedReads.length
+          ? `lecture impossible pour ${failedReads.join(", ")}` : "",
+        failedRestores.length
+          ? `restauration impossible pour ${failedRestores.join(", ")}` : "",
+      ].filter(Boolean).join(" · ");
       persist.textContent =
-        "Certains samples n’ont pas pu être lus dans IndexedDB. Les autres samples restent disponibles.";
+        "Certains samples n’ont pas pu être restaurés. Les fichiers encore présents dans le stockage peuvent être retirés ou remplacés ; les autres samples restent disponibles.";
       status.textContent = restored
-        ? `${restored} sample(s) restauré(s) · lecture impossible pour ${failedReads.join(", ")}`
-        : `Lecture impossible pour ${failedReads.join(", ")} · charge les samples à nouveau`;
+        ? `${restored} sample(s) restauré(s) · ${failures}`
+        : `Restauration incomplète · ${failures}`;
       return;
     }
     persist.textContent =
@@ -1188,7 +1219,7 @@
   restore().catch((e) => {
     persist.textContent =
       "Impossible de lire les samples enregistrés dans ce navigateur. Les samples déjà chargés restent disponibles pour cette session.";
-    if (tracks.every((t) => t.load.version() === 0))
+    if (tracks.every((t) => t.load.version() === 0 && t.importSequence === 0))
       status.textContent = "Lecture du stockage impossible · " + e.message;
   });
 })();

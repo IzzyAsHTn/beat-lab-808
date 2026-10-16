@@ -7,6 +7,7 @@
     playButton = $("#play"),
     downloadButton = $("#download"),
     status = $("#status"),
+    renderActivity = $("#render-activity"),
     name = $("#name");
   const controls = ["cut", "drive", "delay", "reverb"]
     .map((id) => $("#" + id))
@@ -45,9 +46,23 @@
   const setStatus = (message) => {
     status.textContent = message;
   };
-  function clearRender(message = "") {
+  function setRenderActivity(message) {
+    renderActivity.textContent = message;
+  }
+  function announceRenderCancellation(reason) {
+    if (!activeRender) return;
+    activeRender.cancelled = true;
+    setBusy(false);
+    setRenderActivity(
+      (reason === "file"
+        ? "Nouveau fichier sélectionné · le rendu précédent est écarté. "
+        : "Annulation demandée · le rendu sera écarté. ") +
+        "Le calcul continue en arrière-plan jusqu’à sa fin. La préécoute simultanée peut ralentir l’ordinateur. La création d’un autre rendu reste bloquée jusque-là.",
+    );
+  }
+  function clearRender(message = "", reason = "superseded") {
     ++renderToken;
-    if (activeRender) activeRender.cancelled = true;
+    if (activeRender) announceRenderCancellation(reason);
     player.pause();
     player.removeAttribute("src");
     player.load();
@@ -151,33 +166,50 @@
     setPreviewBusy(busy);
   }
   function releaseBackgroundRender(operation, token, background) {
-    const notice = token === renderToken
-      ? "Annulation demandée · le calcul continue en arrière-plan. Les autres commandes sont disponibles ; un nouveau rendu sera possible à la fin."
-      : "";
-    if (notice) setStatus(notice);
     operation.backgroundPending = true;
     const finishBackground = () => {
       if (activeRender !== operation) return;
       operation.backgroundPending = false;
       activeRender = null;
       setBusy(false);
-      if (notice && token === renderToken && status.textContent === notice)
+      setRenderActivity(
+        "Calcul d’arrière-plan terminé · aucun rendu n’a été conservé.",
+      );
+      if (
+        operation.cancelNotice && token === renderToken &&
+        status.textContent === operation.cancelNotice
+      )
         setStatus("Calcul d’arrière-plan terminé · aucun rendu n’a été conservé.");
     };
     background.then(finishBackground, finishBackground);
   }
   async function renderOfflineCancellable(context, operation, onCapability) {
+    function startRendering() {
+      const rendering = context.startRendering();
+      // Keep detached rejections handled and observable after cancellation.
+      rendering.catch((error) =>
+        console.warn("[Beat Lab Effets] Échec du calcul audio hors ligne", error),
+      );
+      return rendering;
+    }
+    async function finishRendering(rendering) {
+      const buffer = await rendering;
+      return {
+        buffer: operation.cancelled ? null : buffer,
+        cancelled: operation.cancelled,
+      };
+    }
     const duration = context.length / context.sampleRate;
     if (duration <= 0.5) {
       onCapability(false, "too-short");
-      return { buffer: await context.startRendering(), cancelled: false };
+      return finishRendering(startRendering());
     }
     if (
       typeof context.suspend !== "function" ||
       typeof context.resume !== "function"
     ) {
       onCapability(false, "unsupported");
-      return { buffer: await context.startRendering(), cancelled: false };
+      return finishRendering(startRendering());
     }
     const interval = 0.5;
     let nextTime = interval;
@@ -186,19 +218,18 @@
       checkpoint = context.suspend(nextTime);
     } catch (error) {
       onCapability(false, "unsupported");
-      return { buffer: await context.startRendering(), cancelled: false };
+      return finishRendering(startRendering());
     }
     onCapability(true);
-    const rendering = context.startRendering();
+    const rendering = startRendering();
     // OfflineAudioContext cannot abort startRendering(); keep its promise handled
     // and resume it at the next checkpoint so it can finish and be collected.
-    rendering.catch(() => {});
     while (true) {
       try {
         await checkpoint;
       } catch (error) {
         onCapability(false, "unsupported");
-        return { buffer: await rendering, cancelled: false };
+        return finishRendering(rendering);
       }
       if (operation.cancelled) {
         // OfflineAudioContext cannot abort startRendering(). Resume it and
@@ -216,7 +247,7 @@
       }
       if (nextTime + interval >= duration) {
         await context.resume();
-        return { buffer: await rendering, cancelled: false };
+        return finishRendering(rendering);
       }
       nextTime += interval;
       try {
@@ -224,7 +255,7 @@
       } catch (error) {
         await context.resume();
         onCapability(false, "unsupported");
-        return { buffer: await rendering, cancelled: false };
+        return finishRendering(rendering);
       }
       await context.resume();
     }
@@ -277,15 +308,20 @@
   });
   async function loadSelectedFile(selected) {
     const token = ++loadToken;
+    const replaced = Boolean(inputBuffer || renderedBuffer);
+    const emptyNotice = replaced
+      ? " Le fichier précédent a été déchargé ; aucun fichier n’est chargé."
+      : " Aucun fichier n’est chargé.";
     stopPreview();
-    clearRender();
+    clearRender("", "file");
     inputBuffer = null;
     renderButton.disabled = true;
     previewButton.disabled = true;
     name.textContent = selected ? selected.name : "Aucun fichier chargé";
     if (!selected) {
       setStatus(
-        "Sélectionne un fichier WAV, AIFF, MP3 ou compatible avec ton navigateur.",
+        "Sélectionne un fichier WAV, AIFF, MP3 ou compatible avec ton navigateur." +
+          emptyNotice,
       );
       return;
     }
@@ -294,11 +330,14 @@
         window.BeatLabCore.checkAudioFile(selected);
       } catch (error) {
         name.textContent = "Aucun fichier chargé";
-        setStatus(error.message);
+        setStatus(error.message + emptyNotice);
         return;
       }
     }
-    setStatus("Chargement et décodage de « " + selected.name + " »…");
+    setStatus(
+      "Chargement et décodage de « " + selected.name + " »…" +
+        (replaced ? " Le fichier précédent a été déchargé." : ""),
+    );
     let decodeContext;
     try {
       await window.BeatLabCore.checkAudioFileDuration(selected);
@@ -344,7 +383,7 @@
       name.textContent = "Aucun fichier chargé";
       setStatus(
         formatError("Impossible de décoder ce fichier", error) +
-          " Essaie un WAV PCM ou un MP3 standard.",
+          " Essaie un WAV PCM ou un MP3 standard." + emptyNotice,
       );
     } finally {
       if (decodeContext)
@@ -574,6 +613,7 @@
     renderToken = token;
     const operation = { cancelled: false, cancellable: false };
     activeRender = operation;
+    setRenderActivity("");
     setBusy(true);
     setStatus("Application des effets et création du rendu…");
     try {
@@ -635,6 +675,7 @@
         operation,
         (cancellable, reason) => {
           operation.cancellable = cancellable;
+          if (operation.cancelled || token !== renderToken) return;
           cancelRenderButton.hidden = !cancellable;
           cancelRenderButton.disabled = !cancellable;
           if (cancellable)
@@ -645,9 +686,19 @@
             setStatus("Rendu en cours · l’annulation n’est pas prise en charge par ce navigateur.");
         },
       );
-      if (rendered.cancelled || token !== renderToken) {
+      if (operation.cancelled || rendered.cancelled || token !== renderToken) {
         if (rendered.cancelled && rendered.background)
           releaseBackgroundRender(operation, token, rendered.background);
+        else if (activeRender === operation) {
+          const notice =
+            "Calcul d’arrière-plan terminé · aucun rendu n’a été conservé.";
+          setRenderActivity(notice);
+          if (
+            operation.cancelNotice && token === renderToken &&
+            status.textContent === operation.cancelNotice
+          )
+            setStatus(notice);
+        }
         return;
       }
       const result = rendered.buffer;
@@ -672,8 +723,20 @@
           ceiling,
       );
     } catch (error) {
-      if (token === renderToken)
+      if (operation.cancelled && activeRender === operation) {
+        const notice =
+          "Calcul d’arrière-plan terminé avec une erreur · aucun rendu n’a été conservé.";
+        setRenderActivity(notice);
+        if (
+          operation.cancelNotice && token === renderToken &&
+          status.textContent === operation.cancelNotice
+        )
+          setStatus(notice);
+      }
+      else if (token === renderToken)
         setStatus(formatError("Échec du rendu audio", error));
+      else
+        console.warn("[Beat Lab Effets] Échec d’un rendu remplacé", error);
     } finally {
       if (activeRender === operation && !operation.backgroundPending) {
         activeRender = null;
@@ -683,12 +746,11 @@
   });
   cancelRenderButton.addEventListener("click", () => {
     if (!activeRender || !activeRender.cancellable) return;
-    activeRender.cancelled = true;
+    announceRenderCancellation("user");
     cancelRenderButton.disabled = true;
-    setBusy(false);
-    setStatus(
-      "Annulation demandée · les autres commandes sont disponibles. Un nouveau rendu sera possible quand le calcul en arrière-plan sera terminé.",
-    );
+    activeRender.cancelNotice =
+      "Annulation demandée · les autres commandes sont disponibles. Un nouveau rendu sera possible quand le calcul en arrière-plan sera terminé.";
+    setStatus(activeRender.cancelNotice);
   });
   playButton.addEventListener("click", async () => {
     if (!renderUrl) return;

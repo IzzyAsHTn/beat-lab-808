@@ -309,6 +309,7 @@ function trackFixture() {
   const fixture = bind(
     scope,
     fn(seq, "updateLabel") +
+      fn(seq, "sampleRetentionNotice") +
       "\n" +
       ["importSample", "removeSample", "restoreSample"]
         .map((n) => "async " + fn(seq, n))
@@ -372,6 +373,9 @@ await test("A failed IndexedDB sample read keeps the possible record removable",
   assert.equal(track.hasStoredSample, false);
   assert.equal(track.fileName, "");
   assert.equal(removeButton.disabled, true);
+  track.fileName = "known.wav";
+  assert.equal(scope.markStoredSampleReadFailure(track, track.load.version()), true);
+  assert.equal(track.fileName, "known.wav");
 });
 await test("IndexedDB open failures reject, clear the cached promise, and allow a retry", async () => {
   let requests = 0;
@@ -601,6 +605,107 @@ await test("A failed sample write preserves the previous in-memory sample", asyn
   assert.equal(s.track.buffer.id, "previous");
   assert.match(s.status.textContent, /précédent est conservé/);
   assert.match(s.persist.textContent, /précédent est conservé/);
+});
+await test("Sequencer import failures accurately describe an empty or stored-only track", async () => {
+  for (const failure of ["size", "decode", "write"]) {
+    for (const stored of [false, true]) {
+      const s = trackFixture();
+      s.track.buffer = null;
+      s.track.fileName = stored ? "stored.wav" : "";
+      s.track.hasStoredSample = stored;
+      if (failure === "decode") s.ensureAudio = () => ({ decodeAudioData: async () => { throw Error("decode failed"); } });
+      if (failure === "write") s.dbPut = async () => { throw Error("quota"); };
+      const candidate = file("bad");
+      if (failure === "size") candidate.size = 50_000_001;
+      await s.importSample(s.track, candidate);
+      assert.doesNotMatch(s.status.textContent, /Le sample déjà sauvegardé est conservé|le sample précédent est conservé/i);
+      if (stored) assert.match(s.status.textContent, /reste dans le stockage/);
+      else assert.match(s.status.textContent, /Aucun sample n’est chargé sur cette piste/);
+    }
+  }
+});
+await test("Restoration uses the blob filename when the record name is missing", async () => {
+  for (const fails of [false, true]) {
+    const s = trackFixture();
+    s.track.fileName = "";
+    if (fails) s.ensureAudio = () => ({ decodeAudioData: async () => { throw Error("bad audio"); } });
+    const restored = await s.restoreSample(s.track, { blob: file("original-name") }, s.track.load.version());
+    assert.equal(restored, !fails);
+    assert.match(s.track.fileName, /original-name\.wav/);
+    if (fails) assert.match(s.track.fileName, /impossible à restaurer/);
+  }
+});
+function startupRestorationFixture() {
+  const s = trackFixture();
+  Object.assign(s, {
+    tracks: [s.track], STATE_KEY: "test", localStorage: { getItem: () => "{}" },
+    tempo: { value: "100" }, bpm: {}, length: { value: "16", options: [{ value: "16" }] },
+    swing: {}, drawSteps() {}, syncTrackToggles() {},
+    formatPercent() {}, formatPan() {}, updateMixSlider() {}, updateFxSlider() {},
+    restoreFx() {}, openDB: async () => ({}),
+    dbGet: async () => ({ name: "broken.wav", blob: file("broken") }),
+    ensureAudio: () => ({ decodeAudioData: async () => { throw Error("decode failed"); } }),
+  });
+  bind(s, fn(seq, "restoreLengthPreference") + "async " + fn(seq, "restore"));
+  return s;
+}
+await test("Sequencer startup reports failed decodes globally and keeps records removable", async () => {
+  const s = startupRestorationFixture();
+  await s.restore();
+  assert.match(s.status.textContent, /restauration impossible pour Kick/);
+  assert.doesNotMatch(s.status.textContent, /Prêt/);
+  assert.match(s.persist.textContent, /restaur/);
+  assert.equal(s.track.hasStoredSample, true);
+  assert.match(s.track.fileName, /broken\.wav/);
+});
+await test("Sequencer startup reports mixed read and decode failures alongside successful tracks", async () => {
+  const s = startupRestorationFixture();
+  s.tracks = ["Kick", "Snare", "Clap"].map((name, i) => ({ ...s.track, name, id: String(i), load: core.latestOperation() }));
+  s.dbGet = async (id) => {
+    if (id === "0") throw Error("read failed");
+    return { name: id + ".wav", blob: file(id) };
+  };
+  s.ensureAudio = () => ({ decodeAudioData: async (bytes) => {
+    if (bytes.id === "1") throw Error("decode failed");
+    return { id: bytes.id };
+  } });
+  bind(s, fn(seq, "markStoredSampleReadFailure"));
+  await s.restore();
+  assert.match(s.status.textContent, /1 sample\(s\) restauré\(s\)/);
+  assert.match(s.status.textContent, /lecture impossible pour Kick/);
+  assert.match(s.status.textContent, /restauration impossible pour Snare/);
+  assert.equal(s.tracks[2].buffer.id, "2");
+});
+await test("Sequencer startup cannot overwrite a newer import failure status", async () => {
+  const s = startupRestorationFixture(), decoding = deferred();
+  s.ensureAudio = () => ({ decodeAudioData: () => decoding.promise });
+  const restoring = s.restore();
+  await tick();
+  const bad = file("invalid");
+  bad.size = 50_000_001;
+  await s.importSample(s.track, bad);
+  const message = s.status.textContent;
+  decoding.resolve({ id: "restored" });
+  await restoring;
+  assert.equal(s.track.buffer.id, "restored");
+  assert.equal(s.status.textContent, message);
+});
+await test("Unavailable startup storage cannot overwrite a newer invalid import", async () => {
+  const s = startupRestorationFixture(), opening = deferred();
+  s.openDB = () => opening.promise;
+  const restoring = s.restore();
+  await tick();
+  const bad = file("invalid");
+  bad.size = 50_000_001;
+  await s.importSample(s.track, bad);
+  const message = s.status.textContent;
+  opening.resolve(null);
+  await restoring;
+  assert.equal(s.status.textContent, message);
+  const errorBody = block(seq, seq.indexOf("{", seq.indexOf("restore().catch((e)")));
+  const onError = vm.runInContext(`(e) => ${errorBody}`, s);
+  onError(Error("open failed"));
+  assert.equal(s.status.textContent, message);
 });
 await test("Restoration cannot overwrite an import selected during startup", async () => {
   const s = trackFixture(),
@@ -1248,6 +1353,74 @@ await test("Effects rendering can stop at a scheduled offline checkpoint", async
   await render.promise;
   assert.equal(resumeCalls, 1);
   assert.equal(renderSettled, true);
+});
+await test("Effects discards a cancellation received after the final checkpoint", async () => {
+  const checkpoint = deferred(), rendering = deferred();
+  let resumed = false;
+  const context = {
+    length: 48000, sampleRate: 48000,
+    suspend: () => checkpoint.promise,
+    resume: async () => { resumed = true; },
+    startRendering: () => rendering.promise,
+  };
+  const scope = bind({ console }, "async " + fn(effectsSource, "renderOfflineCancellable"));
+  const operation = { cancelled: false };
+  const task = scope.renderOfflineCancellable(context, operation, () => {});
+  checkpoint.resolve();
+  await tick();
+  assert.equal(resumed, true);
+  operation.cancelled = true;
+  rendering.resolve({ id: "must-not-be-exported" });
+  const result = await task;
+  assert.equal(result.cancelled, true);
+  assert.equal(result.buffer, null);
+});
+await test("Effects rechecks cancellation after rendering in every fallback", async () => {
+  for (const mode of ["short", "unsupported", "first-suspend-throws", "checkpoint-rejects", "next-suspend-throws"]) {
+    const rendering = deferred(), checkpoint = deferred();
+    let suspensions = 0;
+    const context = {
+      length: mode === "short" ? 0.4 : 2, sampleRate: 1,
+      resume: async () => {},
+      startRendering: () => rendering.promise,
+    };
+    if (mode !== "unsupported") context.suspend = () => {
+      if (mode === "first-suspend-throws" || ++suspensions > 1)
+        throw Error("suspend unavailable");
+      return checkpoint.promise;
+    };
+    const scope = bind({ console }, "async " + fn(effectsSource, "renderOfflineCancellable"));
+    const operation = { cancelled: false };
+    const task = scope.renderOfflineCancellable(context, operation, () => {});
+    if (mode === "checkpoint-rejects") checkpoint.reject(Error("checkpoint rejected"));
+    else checkpoint.resolve();
+    await tick();
+    operation.cancelled = true;
+    rendering.resolve({ id: "discarded" });
+    const result = await task;
+    assert.equal(result.cancelled, true, mode);
+    assert.equal(result.buffer, null, mode);
+  }
+});
+await test("Effects logs a late failure of a discarded background render", async () => {
+  const checkpoint = deferred(), rendering = deferred(), warnings = [];
+  const context = {
+    length: 2, sampleRate: 1,
+    suspend: () => checkpoint.promise,
+    resume: async () => {},
+    startRendering: () => rendering.promise,
+  };
+  const scope = bind({ console: { warn: (...args) => warnings.push(args) } },
+    "async " + fn(effectsSource, "renderOfflineCancellable"));
+  const task = scope.renderOfflineCancellable(context, { cancelled: true }, () => {});
+  checkpoint.resolve();
+  const result = await task;
+  const error = Error("late offline failure");
+  rendering.reject(error);
+  await result.background;
+  await tick();
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0][1], error);
 });
 await test("Effects render reports when its browser cannot cancel offline work", async () => {
   const context = {
@@ -2026,6 +2199,7 @@ await test("Effects invalidate the previous buffer when a newly selected file is
   const s = {
     loadToken: 0,
     inputBuffer: { id: "old-audio" },
+    renderedBuffer: null,
     renderButton: { disabled: false },
     previewButton: { disabled: false },
     name: { textContent: "old.wav" },
@@ -2047,6 +2221,40 @@ await test("Effects invalidate the previous buffer when a newly selected file is
   assert.equal(s.previewStopped, true);
   assert.equal(s.renderCleared, true);
   assert.match(s.status, /Fichier trop volumineux/);
+  assert.match(s.status, /précédent.*déchargé/);
+  assert.match(s.status, /aucun fichier/i);
+});
+await test("Effects explains unloading after metadata, decoding, and decoded-duration failures", async () => {
+  for (const failure of ["metadata", "decode", "decoded-duration"]) {
+    let closed = 0;
+    const s = {
+      console: { error() {}, warn() {} }, loadToken: 0,
+      inputBuffer: { id: "old" }, renderedBuffer: { id: "old-render" },
+      renderButton: {}, previewButton: {}, name: {},
+      stopPreview() {}, clearRender() {}, updateRenderButton() {}, setPreviewBusy() {},
+      setStatus(value) { s.message = value; },
+      window: {
+        BeatLabCore: {
+          checkAudioFile() {},
+          async checkAudioFileDuration() { if (failure === "metadata") throw Error("metadata failed"); },
+        },
+        AudioContext: function () { return {
+          async decodeAudioData() {
+            if (failure === "decode") throw Error("decode failed");
+            return { duration: 121 };
+          },
+          async close() { closed++; },
+        }; },
+      },
+    };
+    bind(s, fn(effectsSource, "formatError") + "async " + fn(effectsSource, "loadSelectedFile"));
+    await s.loadSelectedFile(file("invalid"));
+    assert.equal(s.inputBuffer, null);
+    assert.equal(s.name.textContent, "Aucun fichier chargé");
+    assert.match(s.message, /précédent.*déchargé/);
+    assert.match(s.message, /aucun fichier/i);
+    assert.equal(closed, failure === "metadata" ? 0 : 1);
+  }
 });
 await test("Effects clear the file input after selection so the same file can be retried", async () => {
   const selected = { name: "same.wav" },
@@ -2174,7 +2382,7 @@ await test("Effects cannot start a second render while a cancelled render is sti
   await handler();
 });
 await test("Effects unlocks other controls but holds the render lock until background work settles", async () => {
-  const operation = { cancelled: true },
+  const operation = { cancelled: true, cancelNotice: "Annulation demandée" },
     background = deferred(),
     scope = {
       activeRender: operation,
@@ -2192,7 +2400,9 @@ await test("Effects unlocks other controls but holds the render lock until backg
       },
       cancelRenderButton: { hidden: false, disabled: true },
       preview: null,
-      status: { textContent: "" },
+      status: { textContent: operation.cancelNotice },
+      renderActivity: { textContent: "" },
+      setRenderActivity(message) { scope.renderActivity.textContent = message; },
       setStatus(message) { scope.status.textContent = message; },
     };
   bind(
@@ -2217,14 +2427,16 @@ await test("Effects unlocks other controls but holds the render lock until backg
   assert.equal(scope.renderButton.disabled, false);
   assert.equal(scope.renderButton.textContent, scope.defaultRenderText);
   assert.match(scope.status.textContent, /aucun rendu n’a été conservé/);
+  assert.match(scope.renderActivity.textContent, /Calcul d’arrière-plan terminé/);
 });
-await test("An obsolete cancelled render keeps its lock without overwriting newer file status", async () => {
+await test("Background completion announces its end without overwriting file or preview status", async () => {
+  for (const currentToken of [4, 5]) {
   const operation = { cancelled: true },
     background = deferred(),
     scope = {
       activeRender: operation,
       renderUiBusy: false,
-      renderToken: 5,
+      renderToken: currentToken,
       inputBuffer: { id: "new-source" },
       defaultRenderText: "Créer le rendu et préparer l’écoute",
       file: { disabled: false },
@@ -2238,6 +2450,8 @@ await test("An obsolete cancelled render keeps its lock without overwriting newe
       cancelRenderButton: { hidden: true, disabled: true },
       preview: null,
       status: { textContent: "Fichier prêt · nouvel audio" },
+      renderActivity: { textContent: "" },
+      setRenderActivity(message) { scope.renderActivity.textContent = message; },
       setStatus(message) { scope.status.textContent = message; },
     };
   bind(
@@ -2256,15 +2470,140 @@ await test("An obsolete cancelled render keeps its lock without overwriting newe
   assert.equal(scope.activeRender, null);
   assert.equal(scope.renderButton.disabled, false);
   assert.equal(scope.status.textContent, "Fichier prêt · nouvel audio");
+  assert.match(scope.renderActivity.textContent, /Calcul d’arrière-plan terminé/);
+  }
+});
+await test("Effects announces implicit cancellation separately from file loading and explains preview load", async () => {
+  const scope = {
+    activeRender: { cancellable: true, cancelled: false }, renderToken: 1,
+    player: { pause() {}, removeAttribute() {}, load() {} }, renderUrl: "",
+    renderedBuffer: {}, playButton: {}, downloadButton: {},
+    renderActivity: { textContent: "" }, status: { textContent: "Décodage du nouveau fichier…" },
+    setStatus(message) { scope.status.textContent = message; },
+    setRenderActivity(message) { scope.renderActivity.textContent = message; },
+    setBusy(value) { scope.released = value === false; },
+  };
+  bind(scope, fn(effectsSource, "announceRenderCancellation") + fn(effectsSource, "clearRender"));
+  scope.clearRender("", "file");
+  assert.equal(scope.activeRender.cancelled, true);
+  assert.equal(scope.released, true);
+  assert.match(scope.renderActivity.textContent, /nouveau fichier/i);
+  assert.match(scope.renderActivity.textContent, /arrière-plan/);
+  assert.match(scope.renderActivity.textContent, /préécoute.*ralentir/i);
+  assert.equal(scope.status.textContent, "Décodage du nouveau fichier…");
+});
+function renderEventFixture() {
+  const checkpoint = deferred(), rendering = deferred();
+  const node = () => ({
+    connect(target) { return target; }, start() {},
+    gain: {}, frequency: {}, Q: {},
+  });
+  const context = {
+    length: 48000, sampleRate: 48000, destination: {},
+    createBufferSource: node, createBiquadFilter: node,
+    createWaveShaper: node, createGain: node,
+    suspend: () => checkpoint.promise, resume: async () => {},
+    startRendering: () => rendering.promise,
+  };
+  const scope = {
+    console, inputBuffer: { length: 48000, sampleRate: 48000, numberOfChannels: 1 },
+    renderedBuffer: null, renderUrl: "", activeRender: null, renderToken: 0,
+    renderButton: { disabled: false }, cancelRenderButton: {},
+    playButton: { disabled: true }, downloadButton: { disabled: true },
+    window: { OfflineAudioContext: function () { return context; } },
+    stopPreview() {}, readSettings: () => ({ cut: 18000, drive: 0, delay: 0, reverb: 0 }),
+    clearRender() { scope.renderToken++; }, makeDriveCurve() {}, makeOutputCompressor: node,
+    status: { textContent: "" },
+    setBusy(value) { scope.busy = value; },
+    setStatus(value) { scope.message = value; scope.status.textContent = value; },
+    setRenderActivity(value) { scope.activity = value; },
+    ceilingCalls: 0, encodeCalls: 0, player: {}, URL: { createObjectURL: () => "blob:rendered" },
+    applyOutputCeiling() { scope.ceilingCalls++; return { gain: 1 }; },
+    encodeWav() { scope.encodeCalls++; return {}; }, formatError: (action, error) => error.message,
+  };
+  bind(scope, fn(effectsSource, "announceRenderCancellation") + "async " + fn(effectsSource, "renderOfflineCancellable"));
+  const marker = 'renderButton.addEventListener("click", async () => {';
+  const handler = vm.runInContext(`async () => ${block(effectsSource, effectsSource.indexOf("{", effectsSource.indexOf(marker)))}`, scope);
+  return { scope, checkpoint, rendering, handler };
+}
+await test("Effects late cancellation cannot enable export or retain the rendered buffer", async () => {
+  const { scope, checkpoint, rendering, handler } = renderEventFixture();
+  const pending = handler();
+  checkpoint.resolve();
+  await tick();
+  runCapturedHandler(effectsSource, 'cancelRenderButton.addEventListener("click", () => {', scope);
+  rendering.resolve({ id: "discarded", duration: 1 });
+  await pending;
+  assert.equal(scope.ceilingCalls, 0);
+  assert.equal(scope.encodeCalls, 0);
+  assert.equal(scope.renderedBuffer, null);
+  assert.equal(scope.renderUrl, "");
+  assert.equal(scope.playButton.disabled, true);
+  assert.equal(scope.downloadButton.disabled, true);
+  assert.equal(scope.activeRender, null);
+  assert.equal(scope.busy, false);
+  assert.match(scope.activity, /aucun rendu n’a été conservé/);
+  assert.match(scope.message, /Calcul d’arrière-plan terminé/);
+});
+await test("Effects late checkpoint errors cannot overwrite a newer file status", async () => {
+  const { scope, checkpoint, rendering, handler } = renderEventFixture();
+  const pending = handler();
+  scope.activeRender.cancelled = true;
+  scope.renderToken++;
+  scope.setStatus("Fichier prêt · nouvel audio");
+  checkpoint.reject(Error("late checkpoint failure"));
+  await tick();
+  assert.equal(scope.message, "Fichier prêt · nouvel audio");
+  rendering.resolve({ id: "discarded", duration: 1 });
+  await pending;
+  assert.equal(scope.message, "Fichier prêt · nouvel audio");
+  assert.equal(scope.encodeCalls, 0);
+  assert.match(scope.activity, /Calcul d’arrière-plan terminé/);
+});
+await test("Effects late rendering errors after cancellation are logged and release the lock", async () => {
+  const { scope, checkpoint, rendering, handler } = renderEventFixture(), warnings = [];
+  scope.console = { warn: (...args) => warnings.push(args) };
+  const pending = handler();
+  checkpoint.resolve();
+  await tick();
+  runCapturedHandler(effectsSource, 'cancelRenderButton.addEventListener("click", () => {', scope);
+  const error = Error("late render failure");
+  rendering.reject(error);
+  await pending;
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0][1], error);
+  assert.equal(scope.activeRender, null);
+  assert.equal(scope.busy, false);
+  assert.equal(scope.encodeCalls, 0);
+  assert.match(scope.message, /terminé avec une erreur/);
+  assert.match(scope.activity, /terminé avec une erreur/);
+});
+await test("Effects still prepares a playable WAV when rendering completes without cancellation", async () => {
+  const { scope, checkpoint, rendering, handler } = renderEventFixture();
+  const pending = handler();
+  checkpoint.resolve();
+  await tick();
+  rendering.resolve({ id: "rendered", duration: 1 });
+  await pending;
+  assert.equal(scope.encodeCalls, 1);
+  assert.equal(scope.ceilingCalls, 1);
+  assert.equal(scope.renderedBuffer.id, "rendered");
+  assert.equal(scope.renderUrl, "blob:rendered");
+  assert.equal(scope.playButton.disabled, false);
+  assert.equal(scope.downloadButton.disabled, false);
+  assert.equal(scope.activeRender, null);
+  assert.match(scope.message, /Rendu traité prêt/);
 });
 await test("Effects immediately releases controls and explains the background render lock", async () => {
   const scope = {
     activeRender: { cancellable: true, cancelled: false },
     cancelRenderButton: { disabled: false },
     message: "",
+    setRenderActivity(value) { scope.activity = value; },
     setStatus(value) { scope.message = value; },
     setBusy(value) { scope.released = value === false; },
   };
+  bind(scope, fn(effectsSource, "announceRenderCancellation"));
   runCapturedHandler(
     effectsSource,
     'cancelRenderButton.addEventListener("click", () => {',
