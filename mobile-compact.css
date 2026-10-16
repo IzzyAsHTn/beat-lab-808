@@ -1,6 +1,7 @@
 /* Interfaces mobiles compactes des deux grilles, jusqu’à 650 px. */
 body[data-tool] .mobile-context,
 body[data-tool] .mobile-import-limit { display: none; }
+body[data-tool] .mobile-intro { display: none; }
 
 @media (max-width: 650px) {
   body:is([data-tool="sequencer"], [data-tool="drums"]) .lab-shell {
@@ -18,6 +19,7 @@ body[data-tool] .mobile-import-limit { display: none; }
   body[data-tool] .lab-footer { margin-top: 22px; padding-top: 16px; gap: 10px; }
   body[data-tool] .desktop-mobile-copy:not(.grid-help),
   body[data-tool] .mobile-import-limit { display: none; }
+  body[data-tool="drums"] .mobile-intro { display: block; }
   body[data-tool] .mobile-context {
     display: block;
     margin: 12px 0;
