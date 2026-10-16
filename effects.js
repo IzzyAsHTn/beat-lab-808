@@ -609,7 +609,8 @@
         },
       );
       if (rendered.cancelled || token !== renderToken) {
-        if (token === renderToken) setStatus("Rendu annulé.");
+        if (token === renderToken)
+          setStatus("Calcul terminé en arrière-plan · résultat écarté.");
         return;
       }
       const result = rendered.buffer;
@@ -647,7 +648,9 @@
     if (!activeRender || !activeRender.cancellable) return;
     activeRender.cancelled = true;
     cancelRenderButton.disabled = true;
-    setStatus("Annulation au prochain point de rendu…");
+    setStatus(
+      "Annulation demandée · le navigateur terminera le calcul avant de libérer les commandes.",
+    );
   });
   playButton.addEventListener("click", async () => {
     if (!renderUrl) return;

@@ -428,6 +428,14 @@
       remove.disabled = track.removing || !(track.buffer || track.hasStoredSample);
   }
 
+  function markStoredSampleReadFailure(track) {
+    // The record may still exist even though IndexedDB could not read it.
+    // Keep removal available; deleting a missing key is harmless.
+    track.hasStoredSample = true;
+    track.fileName ||= "sample inaccessible";
+    updateLabel(track, track._label);
+  }
+
   async function importSample(track, file) {
     if (track.removing) return;
     track.load.begin();
@@ -1148,6 +1156,7 @@
       tracks.map((t, i) => {
         if (entries[i].status === "rejected") {
           failedReads.push(t.name);
+          markStoredSampleReadFailure(t);
           return false;
         }
         return restoreSample(t, entries[i].value, versions[i]);

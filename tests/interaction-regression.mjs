@@ -338,6 +338,31 @@ await test("IndexedDB sample reads reject errors instead of masquerading as miss
   request.onerror();
   await assert.rejects(pending, /read failed/);
 });
+await test("A failed IndexedDB sample read keeps the possible record removable", async () => {
+  const removeButton = { disabled: true };
+  const label = {
+    querySelector(selector) {
+      return selector === ".remove-sample" ? removeButton : null;
+    },
+  };
+  const track = {
+    buffer: null,
+    hasStoredSample: false,
+    removing: false,
+    _label: label,
+  };
+  const scope = {};
+  bind(
+    scope,
+    fn(seq, "updateLabel") + "\n" +
+      fn(seq, "markStoredSampleReadFailure") +
+      "globalThis.markStoredSampleReadFailure = markStoredSampleReadFailure;",
+  );
+  scope.markStoredSampleReadFailure(track);
+  assert.equal(track.hasStoredSample, true);
+  assert.equal(track.fileName, "sample inaccessible");
+  assert.equal(removeButton.disabled, false);
+});
 await test("IndexedDB open failures reject, clear the cached promise, and allow a retry", async () => {
   let requests = 0;
   const db = { close() {} };
@@ -2013,6 +2038,23 @@ await test("Effects cannot start a second render while a cancelled render is sti
     body = block(effectsSource, effectsSource.indexOf("{", effectsSource.indexOf(marker))),
     handler = vm.runInNewContext(`async () => ${body}`, scope);
   await handler();
+});
+await test("Effects explains that cancelled offline work must finish before controls unlock", async () => {
+  const scope = {
+    activeRender: { cancellable: true, cancelled: false },
+    cancelRenderButton: { disabled: false },
+    message: "",
+    setStatus(value) { scope.message = value; },
+  };
+  runCapturedHandler(
+    effectsSource,
+    'cancelRenderButton.addEventListener("click", () => {',
+    scope,
+  );
+  scope.capturedHandler();
+  assert.equal(scope.activeRender.cancelled, true);
+  assert.equal(scope.cancelRenderButton.disabled, true);
+  assert.match(scope.message, /terminera le calcul avant de libérer les commandes/);
 });
 await test("The cutter canvas is keyboard focusable and normalization protects near-silence", async () => {
   const html = fs.readFileSync(path.join(root, "samples.html"), "utf8"),
