@@ -350,6 +350,7 @@ await test("A failed IndexedDB sample read keeps the possible record removable",
     hasStoredSample: false,
     removing: false,
     _label: label,
+    load: core.latestOperation(),
   };
   const scope = {};
   bind(
@@ -358,10 +359,19 @@ await test("A failed IndexedDB sample read keeps the possible record removable",
       fn(seq, "markStoredSampleReadFailure") +
       "globalThis.markStoredSampleReadFailure = markStoredSampleReadFailure;",
   );
-  scope.markStoredSampleReadFailure(track);
+  const token = track.load.version();
+  assert.equal(scope.markStoredSampleReadFailure(track, token), true);
   assert.equal(track.hasStoredSample, true);
   assert.equal(track.fileName, "sample inaccessible");
   assert.equal(removeButton.disabled, false);
+  track.load.begin();
+  track.hasStoredSample = false;
+  track.fileName = "";
+  removeButton.disabled = true;
+  assert.equal(scope.markStoredSampleReadFailure(track, token), false);
+  assert.equal(track.hasStoredSample, false);
+  assert.equal(track.fileName, "");
+  assert.equal(removeButton.disabled, true);
 });
 await test("IndexedDB open failures reject, clear the cached promise, and allow a retry", async () => {
   let requests = 0;
@@ -609,6 +619,34 @@ await test("Restoration cannot overwrite an import selected during startup", asy
   a.resolve({ id: "stored" });
   assert.equal(await restore, false);
   assert.equal(s.track.fileName, "B.wav");
+});
+await test("A rejected import does not cancel a sample restoration already in progress", async () => {
+  for (const failure of ["size", "duration"]) {
+    const s = trackFixture(),
+      decoding = deferred();
+    s.core.checkAudioFileDuration = async (candidate) => {
+      if (failure === "duration" && candidate.name === "bad.wav")
+        throw Error("duration limit");
+      return 1;
+    };
+    s.ensureAudio = () => ({ decodeAudioData: (bytes) => decoding.promise });
+    const version = s.track.load.version();
+    const restore = s.restoreSample(
+      s.track,
+      { name: "stored.wav", blob: file("stored") },
+      version,
+    );
+    await tick();
+    const invalid = file("bad");
+    if (failure === "size") invalid.size = 50_000_001;
+    await s.importSample(s.track, invalid);
+    assert.equal(s.track.load.version(), version);
+    decoding.resolve({ id: "stored" });
+    assert.equal(await restore, true);
+    assert.equal(s.track.buffer.id, "stored");
+    assert.equal(s.track.fileName, "stored.wav");
+    assert.match(s.status.textContent, /Import de bad\.wav impossible/);
+  }
 });
 await test("A sample rejected by the duration limit remains removable", async () => {
   const s = trackFixture();
@@ -1476,7 +1514,7 @@ await test("Oversized files are refused before reading or decoding", async () =>
   pendingRead.resolve({ id: "A" });
   await earlier;
   assert.equal(s.track.fileName, "previous.wav");
-  assert.equal(s.track.load.version(), 2);
+  assert.equal(s.track.load.version(), 0);
   assert.deepEqual(s.writes, []);
   assert.match(s.status.textContent, /50 Mo/);
   assert.match(s.status.textContent, /Import de B\.wav impossible/);

@@ -428,17 +428,18 @@
       remove.disabled = track.removing || !(track.buffer || track.hasStoredSample);
   }
 
-  function markStoredSampleReadFailure(track) {
+  function markStoredSampleReadFailure(track, token) {
+    if (!track.load.current(token)) return false;
     // The record may still exist even though IndexedDB could not read it.
     // Keep removal available; deleting a missing key is harmless.
     track.hasStoredSample = true;
     track.fileName ||= "sample inaccessible";
     updateLabel(track, track._label);
+    return true;
   }
 
   async function importSample(track, file) {
     if (track.removing) return;
-    track.load.begin();
     const requestId = ++track.importSequence,
       storageEpoch = track.storageEpoch;
     try {
@@ -493,6 +494,9 @@
       name: file.name,
       type: file.type || "audio/wav",
     };
+    // A rejected or superseded import must not invalidate restoration. Once
+    // the selected file has passed validation and decoding, it takes over.
+    track.load.begin();
     try {
       await track.write(async () => {
         if (
@@ -1158,8 +1162,8 @@
     const results = await Promise.all(
       tracks.map((t, i) => {
         if (entries[i].status === "rejected") {
-          failedReads.push(t.name);
-          markStoredSampleReadFailure(t);
+          if (markStoredSampleReadFailure(t, versions[i]))
+            failedReads.push(t.name);
           return false;
         }
         return restoreSample(t, entries[i].value, versions[i]);
