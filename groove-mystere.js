@@ -7,6 +7,7 @@ const persistenceStatus = document.getElementById("persist");
 const session = window.BeatLabCore.latestOperation();
 const flashVersions = pads.map(() => 0);
 const activeSounds = new Set();
+const noiseBuffers = new WeakMap();
 let keyboardGame = false;
 const howto = document.getElementById("howto");
 const gameModeTitle = document.getElementById("gameModeTitle");
@@ -35,6 +36,20 @@ const padSets = {
 };
 const noteFrequencies = [196.0, 261.63, 329.63, 392.0];
 const SCORE_KEY = "beat-lab-groove-scores-v1";
+function noiseBufferFor(context, duration) {
+  let buffers = noiseBuffers.get(context);
+  if (!buffers) {
+    buffers = new Map();
+    noiseBuffers.set(context, buffers);
+  }
+  const frames = Math.ceil(context.sampleRate * duration);
+  if (buffers.has(frames)) return buffers.get(frames);
+  const buffer = context.createBuffer(1, frames, context.sampleRate),
+    data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  buffers.set(frames, buffer);
+  return buffer;
+}
 function readScores() {
   const scores = {
     bestByMode: { drums: 0, notes: 0 },
@@ -270,8 +285,14 @@ function makeSound(id, token = session.version(), when = null) {
     void ctx
       .resume()
       .then(() => {
-        if (ctx.state === "running" && session.current(token))
+        if (ctx.state === "running" && session.current(token)) {
           scheduleSound(id, ctx, when);
+        } else if (session.current(token)) {
+          const message =
+            "Partie arrêtée : le navigateur n’a pas pu réactiver le son. Clique sur « Lancer la partie » pour reprendre.";
+          if (hasActiveGame()) stopForInterruption(message);
+          else updateStatus(message);
+        }
       })
       .catch(() => {
         if (!session.current(token)) return;
@@ -324,13 +345,7 @@ function scheduleSound(id, ctx, when = null) {
     osc.stop(now + 0.25);
   } else if (id === 2) {
     const duration = 0.09,
-      buffer = ctx.createBuffer(
-        1,
-        Math.ceil(ctx.sampleRate * duration),
-        ctx.sampleRate,
-      );
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      buffer = noiseBufferFor(ctx, duration);
     const source = trackSound(ctx.createBufferSource()),
       filter = ctx.createBiquadFilter(),
       gain = ctx.createGain();
@@ -343,13 +358,7 @@ function scheduleSound(id, ctx, when = null) {
     source.start(now);
   } else {
     const duration = id === 1 ? 0.16 : 0.11,
-      buffer = ctx.createBuffer(
-        1,
-        Math.ceil(ctx.sampleRate * duration),
-        ctx.sampleRate,
-      );
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      buffer = noiseBufferFor(ctx, duration);
     const source = trackSound(ctx.createBufferSource()),
       filter = ctx.createBiquadFilter(),
       gain = ctx.createGain();
@@ -431,7 +440,13 @@ async function playSequence(token = session.version()) {
   );
   await wait(450);
   const ctx = audioContext;
-  if (!ctx || ctx.state !== "running") return;
+  if (!session.current(token) || phase !== "playback") return;
+  if (!ctx || ctx.state !== "running") {
+    stopForInterruption(
+      "Partie arrêtée : le son a été suspendu pendant l’écoute. Clique sur « Lancer la partie » pour reprendre.",
+    );
+    return;
+  }
   const firstSoundAt = ctx.currentTime + 0.05,
     roundDuration = (sequence.length * tempo) / 1000,
     finishAt = firstSoundAt + roundDuration;
@@ -446,7 +461,12 @@ async function playSequence(token = session.version()) {
   ) {
     await wait(Math.min(50, Math.max(1, (finishAt - ctx.currentTime) * 1000)));
   }
-  if (ctx.state !== "running") return;
+  if (ctx.state !== "running") {
+    stopForInterruption(
+      "Partie arrêtée : le son a été suspendu pendant l’écoute. Clique sur « Lancer la partie » pour reprendre.",
+    );
+    return;
+  }
   if (!session.current(token)) return;
   phase = "input";
   inputIndex = 0;

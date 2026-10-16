@@ -269,6 +269,8 @@ const scope = {
     ],
   ],
   paintTimers: new Set(),
+  activeSources: new Set(),
+  setTransportGain() {},
   setTimeout: (fn) => {
     callbacks.push(fn);
     return callbacks.length;

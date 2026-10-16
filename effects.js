@@ -67,8 +67,9 @@
   }
   function updatePreview() {
     if (!preview) return;
+    const active = preview;
     const settings = readSettings();
-    const { context, filter, distortion, dry, delayWet, reverbWet } = preview;
+    const { context, filter, distortion, dry, delayWet } = active;
     smoothParam(filter.frequency, settings.cut, context);
     distortion.curve = makeDriveCurve(settings.drive);
     smoothParam(
@@ -77,7 +78,25 @@
       context,
     );
     if (delayWet) smoothParam(delayWet.gain, settings.delay * 0.65, context);
-    if (reverbWet) smoothParam(reverbWet.gain, settings.reverb * 0.65, context);
+    if (settings.reverb > 0 && !active.reverbWet) {
+      const convolver = context.createConvolver(),
+        reverbWet = context.createGain();
+      convolver.buffer = makeImpulse(context);
+      reverbWet.gain.value = 0;
+      convolver.connect(reverbWet).connect(active.output);
+      active.nodes.push(convolver, reverbWet);
+      active.reverbConvolver = convolver;
+      active.reverbWet = reverbWet;
+    }
+    if (active.reverbWet && settings.reverb > 0 && !active.reverbConnected) {
+      distortion.connect(active.reverbConvolver);
+      active.reverbConnected = true;
+    } else if (active.reverbWet && settings.reverb === 0 && active.reverbConnected) {
+      distortion.disconnect(active.reverbConvolver);
+      active.reverbConnected = false;
+    }
+    if (active.reverbWet)
+      smoothParam(active.reverbWet.gain, settings.reverb * 0.65, context);
   }
   function stopPreview(message = "") {
     ++previewToken;
@@ -158,6 +177,9 @@
       }
       if (operation.cancelled) {
         await context.resume();
+        // OfflineAudioContext has no abort method. Keep this operation active
+        // until its rendering promise settles so a second render cannot overlap.
+        await rendering.catch(() => null);
         return { buffer: null, cancelled: true };
       }
       if (nextTime + interval >= duration) {
@@ -221,16 +243,7 @@
       }
     });
   });
-  file.addEventListener("change", async () => {
-    const selected = file.files && file.files[0];
-    if (selected) {
-      try {
-        window.BeatLabCore.checkAudioFile(selected);
-      } catch (error) {
-        setStatus(error.message);
-        return;
-      }
-    }
+  async function loadSelectedFile(selected) {
     const token = ++loadToken;
     stopPreview();
     clearRender();
@@ -243,6 +256,14 @@
         "Sélectionne un fichier WAV, AIFF, MP3 ou compatible avec ton navigateur.",
       );
       return;
+    }
+    if (selected) {
+      try {
+        window.BeatLabCore.checkAudioFile(selected);
+      } catch (error) {
+        setStatus(error.message);
+        return;
+      }
     }
     setStatus("Chargement et décodage de « " + selected.name + " »…");
     let decodeContext;
@@ -299,6 +320,9 @@
           console.warn("Fermeture du décodeur audio", error);
         }
     }
+  }
+  file.addEventListener("change", () => {
+    void loadSelectedFile(file.files && file.files[0]);
   });
   const driveCurves = new Map();
   function makeDriveCurve(amount) {
@@ -392,14 +416,6 @@
         delay.connect(delayWet).connect(output);
         nodes.push(delay, feedback, damping, delayWet);
       }
-      {
-        const convolver = context.createConvolver();
-        reverbWet = context.createGain();
-        convolver.buffer = makeImpulse(context);
-        reverbWet.gain.value = settings.reverb * 0.65;
-        distortion.connect(convolver).connect(reverbWet).connect(output);
-        nodes.push(convolver, reverbWet);
-      }
       const limiter = makeOutputCompressor(context);
       output.connect(limiter).connect(context.destination);
       nodes.push(limiter);
@@ -411,6 +427,7 @@
         dry,
         delayWet,
         reverbWet,
+        output,
         nodes,
       };
       updatePreview();
@@ -425,9 +442,6 @@
       source.start(0);
       setPreviewBusy(false);
       setStatus("Préécoute en boucle · ajuste les effets en direct.");
-      source.onended = () => {
-        if (preview?.source === source) stopPreview("Préécoute terminée.");
-      };
     } catch (error) {
       if (
         pendingContext &&
@@ -514,7 +528,7 @@
     return new Blob([bytes], { type: "audio/wav" });
   }
   renderButton.addEventListener("click", async () => {
-    if (!inputBuffer || renderButton.disabled) return;
+    if (!inputBuffer || renderButton.disabled || activeRender) return;
     stopPreview();
     const sourceBuffer = inputBuffer;
     const settings = readSettings();

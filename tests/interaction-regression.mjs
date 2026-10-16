@@ -17,6 +17,7 @@ const source = (name) => fs.readFileSync(path.join(root, name + ".js"), "utf8");
 const seq = source("sequencer"),
   drums = source("index"),
   cut = source("samples"),
+  effectsSource = source("effects"),
   game = source("groove-mystere");
 // Production handlers run unchanged with controlled completion order and audio/storage doubles.
 function block(s, start) {
@@ -109,11 +110,56 @@ await test("Both sequencers stop after an audio-context interruption", async () 
       scope.stopCalls++;
       scope.playing = false;
     };
-    runCapturedHandler(sourceText, 'ctx.addEventListener("statechange", () => {', scope);
+    const marker = 'ctx.addEventListener("statechange", (event) => {';
+    const registration = sourceText.indexOf(marker);
+    assert.ok(registration >= 0);
+    const callbackStart = sourceText.indexOf("(event) =>", registration);
+    const body = block(sourceText, sourceText.indexOf("{", callbackStart));
+    const listener = vm.runInNewContext(`(event) => ${body}`, scope);
+    listener({ currentTarget: scope.ctx });
     assert.equal(scope.stopCalls, 1);
     assert.match(scope.status.textContent, /interruption audio/);
     assert.equal(scope.playing, false);
   }
+});
+await test("An obsolete audio context cannot stop the current sequencer", async () => {
+  for (const sourceText of [drums, seq]) {
+    const current = { state: "running" },
+      stale = { state: "suspended" },
+      scope = {
+        ctx: current,
+        playing: true,
+        starting: false,
+        status: { textContent: "En lecture" },
+      },
+      marker = 'ctx.addEventListener("statechange", (event) => {',
+      registration = sourceText.indexOf(marker),
+      callbackStart = sourceText.indexOf("(event) =>", registration),
+      body = block(sourceText, sourceText.indexOf("{", callbackStart)),
+      listener = vm.runInNewContext(`(event) => ${body}`, scope);
+    let stopCalls = 0;
+    scope.stop = () => stopCalls++;
+    listener({ currentTarget: stale });
+    assert.equal(stopCalls, 0);
+    current.state = "suspended";
+    listener({ currentTarget: current });
+    assert.equal(stopCalls, 1);
+  }
+});
+await test("Sequencer restores a saved length only when that length is an available option", async () => {
+  const apply = fn(seq, "restoreLengthPreference");
+  const scope = bind(
+    { select: { options: [{ value: "8" }, { value: "16" }], value: "16" } },
+    apply + ";restoreLengthPreference(select,32);",
+  );
+  assert.equal(scope.select.value, "16");
+  scope.select.options.push({ value: "32" });
+  vm.runInContext("restoreLengthPreference(select,32)", scope);
+  assert.equal(scope.select.value, "32");
+  assert.deepEqual(
+    Array.from(fs.readFileSync(path.join(root, "sequencer.html"), "utf8").matchAll(/<option value="(\d+)"/g), (m) => m[1]),
+    ["8", "16"],
+  );
 });
 await test("808 step names keep track position and do not duplicate toggle state", async () => {
   const stepLabel = fn(drums, "stepAccessibleLabel");
@@ -144,7 +190,7 @@ await test("Clear and remove actions honor their confirmation dialog and restore
   const steps = [true, true];
   const attributes = [];
   const drumScope = {
-    window: { confirm: () => false },
+    window: { confirm: (message) => { drumScope.confirmation = message; return false; } },
     tracks: [{ steps }],
     cells: [[...steps].map(() => ({
       classList: { remove() {} },
@@ -171,6 +217,13 @@ await test("Clear and remove actions honor their confirmation dialog and restore
     "KICK, piste 1 sur 8, pas 2 sur 16",
   ]);
   assert.deepEqual(attributes.filter(([name]) => name === "aria-pressed").map(([, value]) => value), ["false", "false"]);
+
+  const sequencerClear = {
+    window: { confirm: (message) => { sequencerClear.confirmation = message; return false; } },
+    tracks: [],
+  };
+  runCapturedHandler(seq, '$("#clear").addEventListener("click", () => {', sequencerClear);
+  assert.match(sequencerClear.confirmation, /visibles et masqués/);
 
   const track = { buffer: { id: "sample" }, hasStoredSample: true, fileName: "loop.wav" };
   let removals = 0;
@@ -236,7 +289,7 @@ function trackFixture() {
       storageEpoch: 0,
       removing: false,
       _input: {},
-      _label: {},
+      _label: { querySelector: () => null },
       buffer: { id: "previous" },
       fileName: "previous.wav",
     },
@@ -255,9 +308,11 @@ function trackFixture() {
   scope.dbDelete = async () => scope.writes.push("delete");
   const fixture = bind(
     scope,
-    ["importSample", "removeSample", "restoreSample"]
-      .map((n) => "async " + fn(seq, n))
-      .join("\n"),
+    fn(seq, "updateLabel") +
+      "\n" +
+      ["importSample", "removeSample", "restoreSample"]
+        .map((n) => "async " + fn(seq, n))
+        .join("\n"),
   );
   fixture.durationChecks = durationChecks;
   return fixture;
@@ -447,7 +502,9 @@ await test("A queued valid import still completes when a newer import fails deco
   assert.equal(s.track.fileName, "A.wav");
   assert.equal(s.track.buffer.id, "A");
   assert.deepEqual(s.writes, ["A.wav"]);
-  assert.match(s.status.textContent, /chargé et sauvegardé/);
+  assert.match(s.status.textContent, /Import de B\.wav impossible/);
+  assert.match(s.status.textContent, /A\.wav.*finalement été sauvegardé/);
+  assert.doesNotMatch(s.status.textContent, /Le sample déjà sauvegardé est conservé/);
 });
 await test("A failed sample write preserves the previous in-memory sample", async () => {
   const s = trackFixture();
@@ -494,6 +551,14 @@ await test("A sample rejected by the duration limit remains removable", async ()
   assert.equal(restored, false);
   assert.equal(s.track.hasStoredSample, true);
   assert.match(s.track.fileName, /impossible à restaurer/);
+  const removeButton = { disabled: true };
+  s.track._label = {
+    querySelector(selector) {
+      return selector === ".remove-sample" ? removeButton : null;
+    },
+  };
+  s.updateLabel(s.track, s.track._label);
+  assert.equal(removeButton.disabled, false);
 });
 await test("Removing a sample cancels a pending import and waits for earlier writes", async () => {
   const s = trackFixture(),
@@ -518,6 +583,21 @@ await test("Failed removal retains the sample and unlocks its input", async () =
   assert.equal(s.track.buffer.id, "previous");
   assert.equal(s.track._input.disabled, false);
   assert.match(s.status.textContent, /non supprimé/);
+});
+await test("A failed removal does not invalidate an import that is still decoding", async () => {
+  const s = trackFixture(),
+    decoded = deferred();
+  s.core.checkAudioFileDuration = async () => decoded.promise;
+  s.dbDelete = async () => { throw Error("quota"); };
+  const pendingImport = s.importSample(s.track, file("new"));
+  await tick();
+  await s.removeSample(s.track);
+  assert.match(s.persist.textContent, /imports déjà en cours peuvent se terminer/);
+  decoded.resolve(1);
+  await pendingImport;
+  assert.equal(s.track.fileName, "new.wav");
+  assert.equal(s.track.buffer.id, "new");
+  assert.deepEqual(s.writes, ["new.wav"]);
 });
 await test("Sequencer master output is connected through the compressor", async () => {
   let connectedTo = null,
@@ -654,6 +734,99 @@ await test("A failed industrial clap load can be retried on a later start", asyn
   assert.equal(await scope.loadIndustrialClap(), null);
   assert.equal(requests, 2);
 });
+await test("The 808 clap frequency used by the synth matches the tuning display", async () => {
+  const frequencies = [];
+  const node = () => ({
+    gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} },
+    frequency: { setValueAtTime(value) { frequencies.push(value); } },
+    Q: { setValueAtTime() {} },
+    connect(next) { return next; },
+    start() {},
+    stop() {},
+  });
+  const scope = {
+    kit: { value: "808" },
+    activeSources: new Set(),
+    ctx: { createBufferSource: node, createBiquadFilter: node, createGain: node },
+    noiseBuffer: () => ({}),
+    voiceOutput: () => node(),
+    getClapRoom: () => node(),
+  };
+  bind(
+    scope,
+    fn(drums, "trackSource") + fn(drums, "tuningReference") + fn(drums, "classic808Clap") +
+      ";classic808Clap(1,{id:'clap',tuning:0});",
+  );
+  assert.equal(scope.tuningReference("clap"), 1700);
+  assert.ok(frequencies.length > 0);
+  assert.ok(frequencies.every((frequency) => frequency === 1700));
+  assert.doesNotMatch(drums, /else if \(kind === "clap"\)/);
+  assert.doesNotMatch(drums, /industrial \? 0\.2 : 0\.2/);
+});
+await test("808 tempo and tuning persistence is debounced and flushed on commit", async () => {
+  const callbacks = new Map();
+  let nextTimer = 0,
+    writes = 0,
+    cleared = 0;
+  const scope = {
+    patternSaveTimer: 0,
+    savePattern() { writes++; },
+    setTimeout(callback, delay) {
+      assert.equal(delay, 180);
+      const id = ++nextTimer;
+      callbacks.set(id, callback);
+      return id;
+    },
+    clearTimeout(id) {
+      if (callbacks.delete(id)) cleared++;
+    },
+  };
+  bind(scope, fn(drums, "schedulePatternSave") + fn(drums, "flushPatternSave"));
+  scope.schedulePatternSave();
+  scope.schedulePatternSave();
+  assert.equal(writes, 0);
+  assert.equal(callbacks.size, 1);
+  assert.equal(cleared, 1);
+  const [timer, callback] = [...callbacks.entries()][0];
+  callbacks.delete(timer);
+  callback();
+  assert.equal(writes, 1);
+  scope.schedulePatternSave();
+  scope.flushPatternSave();
+  assert.equal(writes, 2);
+  assert.equal(callbacks.size, 0);
+});
+await test("Stopping the 808 fades the transport bus to silence", async () => {
+  const automation = [];
+  const stoppedAt = [];
+  const gain = {
+    value: 1,
+    cancelScheduledValues(time) { automation.push(["cancel", time]); },
+    setValueAtTime(value, time) { automation.push(["set", value, time]); this.value = value; },
+    linearRampToValueAtTime(value, time) { automation.push(["ramp", value, time]); },
+  };
+  const scope = {
+    ctx: { currentTime: 2, state: "running" },
+    transportGain: { gain },
+    startVersion: 0,
+    starting: false,
+    playing: true,
+    playButton: { disabled: false, textContent: "■ Arrêter" },
+    timer: 7,
+    activeSources: new Set([{ stop: (time) => stoppedAt.push(time) }]),
+    paintTimers: new Set(),
+    cells: [],
+    status: { textContent: "En lecture" },
+    clearInterval(id) { assert.equal(id, 7); },
+    setTimeout() {},
+    clearTimeout() {},
+  };
+  bind(scope, fn(drums, "setTransportGain") + fn(drums, "stop") + ";stop();");
+  assert.equal(scope.playing, false);
+  assert.ok(automation.some((entry) => entry[0] === "ramp" && entry[1] === 0 && entry[2] === 2.005));
+  assert.deepEqual(stoppedAt, [2.006]);
+  assert.equal(scope.activeSources.size, 0);
+});
 await test("808 tom synthesis safely skips a missing voice track", async () => {
   vm.runInNewContext(
     "const tracks=[];" + fn(drums, "tom") + ";tom(0,false);",
@@ -684,8 +857,10 @@ await test("808 playback starts with its synthesized clap when loading times out
     playButton, kit: { value: "industrial" }, industrialClapBuffer: null,
     status: { textContent: "" },
     ensureAudio: () => audio,
+    setTransportGain(value) { scope.transportLevels.push(value); },
     loadIndustrialClap: async () => null,
     ctx: audio, step: 0, nextTime: 0, timer: null, interval: 25,
+    transportLevels: [],
     scheduler() {}, setInterval: () => 12,
   };
   await vm.runInNewContext("async " + fn(drums, "start") + ";start()", scope);
@@ -694,6 +869,7 @@ await test("808 playback starts with its synthesized clap when loading times out
   assert.equal(playButton.disabled, false);
   assert.equal(playButton.textContent, "■ Arrêter");
   assert.match(scope.status.textContent, /clap synthétique de secours/);
+  assert.deepEqual(scope.transportLevels, [1]);
 });
 await test("Groove scores restore valid values and default safely on corrupt storage", async () => {
   const grooveSource = source("groove-mystere");
@@ -845,6 +1021,24 @@ await test("Groove stops the active game when audio resume rejects", async () =>
     stopForInterruption(message) { stoppedMessage = message; },
     updateStatus(message) { stoppedMessage = message; },
     scheduleSound() { assert.fail("must not schedule after rejected resume"); },
+  };
+  vm.runInNewContext(fn(source("groove-mystere"), "makeSound") + ";makeSound(0, 4)", scope);
+  await tick();
+  assert.match(stoppedMessage, /Partie arrêtée/);
+  assert.match(stoppedMessage, /réactiver le son/);
+});
+await test("Groove reports a resume that resolves without a running audio context", async () => {
+  let stoppedMessage = "";
+  const scope = {
+    audioContext: {
+      state: "suspended",
+      resume: () => Promise.resolve(),
+    },
+    session: { version: () => 4, current: (token) => token === 4 },
+    hasActiveGame: () => true,
+    stopForInterruption(message) { stoppedMessage = message; },
+    updateStatus(message) { stoppedMessage = message; },
+    scheduleSound() { assert.fail("must not schedule while audio is suspended"); },
   };
   vm.runInNewContext(fn(source("groove-mystere"), "makeSound") + ";makeSound(0, 4)", scope);
   await tick();
@@ -1107,6 +1301,7 @@ await test("Groove Mystere routes every synthesized voice through one master lim
   };
   const scope = {
     context,
+    noiseBuffers: new WeakMap(),
     limiterContext: undefined,
     masterLimiter: undefined,
     mode: "drums",
@@ -1115,7 +1310,7 @@ await test("Groove Mystere routes every synthesized voice through one master lim
   };
   bind(
     scope,
-    fn(game, "getMasterLimiter") + fn(game, "scheduleSound") +
+    fn(game, "noiseBufferFor") + fn(game, "getMasterLimiter") + fn(game, "scheduleSound") +
       ";for(let id=0;id<4;id++)scheduleSound(id,context);mode='notes';for(let id=0;id<4;id++)scheduleSound(id,context);",
   );
   const limiter = scope.masterLimiter;
@@ -1182,16 +1377,24 @@ await test("Groove Mystere skips pad flashes when reduced motion is requested", 
 await test("Oversized files are refused before reading or decoding", async () => {
   core.checkAudioFile({ size: 50_000_000 });
   assert.throws(() => core.checkAudioFile({ size: 50_000_001 }), /50 Mo/);
-  const s = trackFixture();
+  const s = trackFixture(),
+    pendingRead = deferred();
+  const earlier = s.importSample(s.track, file("A", () => pendingRead.promise));
+  await tick();
   await s.importSample(s.track, {
+    name: "B.wav",
     size: 50_000_001,
     arrayBuffer() {
       throw Error("must not read");
     },
   });
+  pendingRead.resolve({ id: "A" });
+  await earlier;
   assert.equal(s.track.fileName, "previous.wav");
-  assert.equal(s.track.load.version(), 0);
+  assert.equal(s.track.load.version(), 2);
+  assert.deepEqual(s.writes, []);
   assert.match(s.status.textContent, /50 Mo/);
+  assert.match(s.status.textContent, /A\.wav a été annulé/);
 });
 function transportFixture() {
   const resume = deferred(),
@@ -1656,6 +1859,217 @@ await test("Stopping playback prevents pending notes and response prompts", asyn
   await playback;
   assert.equal(s.phase, "idle");
   assert.match(s.message, /Partie arrêtée/);
+});
+await test("Groove exits playback cleanly if audio suspends during the lead-in", async () => {
+  const { s, waits } = gameFixture();
+  s.phase = "playback";
+  let stoppedMessage = "";
+  s.stopForInterruption = (message) => {
+    s.phase = "idle";
+    s.startButton.disabled = false;
+    stoppedMessage = message;
+  };
+  bind(s, "async " + fn(game, "playSequence"));
+  const playback = s.playSequence();
+  assert.equal(waits.length, 1);
+  s.audioContext.state = "suspended";
+  waits[0].resolve();
+  await playback;
+  assert.equal(s.phase, "idle");
+  assert.match(stoppedMessage, /suspendu pendant l’écoute/);
+});
+await test("Groove exits playback cleanly if audio suspends during the sequence", async () => {
+  const { s, waits } = gameFixture();
+  s.phase = "playback";
+  let stoppedMessage = "";
+  s.stopForInterruption = (message) => {
+    s.phase = "idle";
+    s.startButton.disabled = false;
+    stoppedMessage = message;
+  };
+  bind(s, "async " + fn(game, "playSequence"));
+  const playback = s.playSequence();
+  waits[0].resolve();
+  await tick();
+  assert.equal(waits.length, 2);
+  s.audioContext.state = "suspended";
+  waits[1].resolve();
+  await playback;
+  assert.equal(s.phase, "idle");
+  assert.match(stoppedMessage, /suspendu pendant l’écoute/);
+});
+await test("Effects invalidate the previous buffer when a newly selected file is rejected", async () => {
+  const s = {
+    loadToken: 0,
+    inputBuffer: { id: "old-audio" },
+    renderButton: { disabled: false },
+    previewButton: { disabled: false },
+    name: { textContent: "old.wav" },
+    window: {
+      BeatLabCore: {
+        checkAudioFile() { throw new Error("Fichier trop volumineux"); },
+      },
+    },
+    stopPreview() { s.previewStopped = true; },
+    clearRender() { s.renderCleared = true; },
+    setStatus(message) { s.status = message; },
+  };
+  bind(s, "async " + fn(source("effects"), "loadSelectedFile"));
+  await s.loadSelectedFile({ name: "rejected.wav" });
+  assert.equal(s.inputBuffer, null);
+  assert.equal(s.renderButton.disabled, true);
+  assert.equal(s.previewButton.disabled, true);
+  assert.equal(s.name.textContent, "rejected.wav");
+  assert.equal(s.previewStopped, true);
+  assert.equal(s.renderCleared, true);
+  assert.match(s.status, /Fichier trop volumineux/);
+});
+await test("Effects preview creates reverb only when its control is above zero", async () => {
+  let settings = { cut: 12000, drive: 0, delay: 0, reverb: 0 },
+    convolvers = 0,
+    connected = 0,
+    disconnected = 0;
+  const param = () => ({
+    value: 0,
+    setTargetAtTime(value) { this.value = value; },
+    setValueAtTime(value) { this.value = value; },
+  });
+  const node = () => ({ connect(next) { return next; } });
+  const context = {
+    currentTime: 0,
+    createConvolver() { convolvers++; return { ...node(), buffer: null }; },
+    createGain() { return { ...node(), gain: param() }; },
+  };
+  const active = {
+    context,
+    filter: { frequency: param() },
+    distortion: {
+      connect() { connected++; return node(); },
+      disconnect() { disconnected++; },
+      curve: null,
+    },
+    dry: { gain: param() },
+    delayWet: null,
+    reverbWet: null,
+    output: node(),
+    nodes: [],
+  };
+  const scope = bind(
+    {
+      preview: active,
+      readSettings: () => settings,
+      makeDriveCurve: () => ({}),
+      makeImpulse: () => ({ id: "impulse" }),
+    },
+    fn(effectsSource, "smoothParam") + fn(effectsSource, "updatePreview"),
+  );
+  scope.updatePreview();
+  assert.equal(convolvers, 0);
+  assert.equal(connected, 0);
+  settings = { ...settings, reverb: 0.4 };
+  scope.updatePreview();
+  assert.equal(convolvers, 1);
+  assert.equal(connected, 1);
+  assert.ok(active.reverbWet);
+  settings = { ...settings, reverb: 0 };
+  scope.updatePreview();
+  assert.equal(disconnected, 1);
+  settings = { ...settings, reverb: 0.2 };
+  scope.updatePreview();
+  assert.equal(convolvers, 1);
+  assert.equal(connected, 2);
+});
+await test("Cancelled Effects rendering stays active until offline rendering settles", async () => {
+  let resolveCheckpoint, resolveRendering, settled = false;
+  const context = {
+    length: 2,
+    sampleRate: 1,
+    suspend() { return new Promise((resolve) => { resolveCheckpoint = resolve; }); },
+    resume() { return Promise.resolve(); },
+    startRendering() { return new Promise((resolve) => { resolveRendering = resolve; }); },
+  };
+  const run = vm.runInNewContext(
+    "async " + fn(effectsSource, "renderOfflineCancellable") + ";renderOfflineCancellable",
+  );
+  const operation = { cancelled: true };
+  const pending = run(context, operation, () => {}).then((value) => { settled = true; return value; });
+  resolveCheckpoint();
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(settled, false);
+  resolveRendering({ id: "finished" });
+  const result = await pending;
+  assert.equal(result.buffer, null);
+  assert.equal(result.cancelled, true);
+});
+await test("Effects cannot start a second render while a cancelled render is still pending", async () => {
+  const scope = {
+    inputBuffer: { id: "source" },
+    renderButton: { disabled: false },
+    activeRender: { cancelled: true },
+    stopPreview() { assert.fail("a second render must not start"); },
+  };
+  const marker = 'renderButton.addEventListener("click", async () => {',
+    body = block(effectsSource, effectsSource.indexOf("{", effectsSource.indexOf(marker))),
+    handler = vm.runInNewContext(`async () => ${body}`, scope);
+  await handler();
+});
+await test("The cutter canvas is keyboard focusable and normalization protects near-silence", async () => {
+  const html = fs.readFileSync(path.join(root, "samples.html"), "utf8"),
+    canvas = html.match(/<canvas[^>]*id="wave"[^>]*>/)?.[0];
+  assert.ok(canvas);
+  assert.match(canvas, /tabindex="0"/);
+  const gain = vm.runInNewContext(
+    fn(cut, "normalizationGainForPeak") + ";normalizationGainForPeak",
+  );
+  assert.equal(gain(0), 1);
+  assert.equal(gain(0.0009), 1);
+  assert.equal(gain(0.001), 4);
+  assert.equal(gain(0.05), 4);
+  assert.ok(Math.abs(gain(0.5) - 1.78250188) < 1e-8);
+  assert.ok(gain(1) < 1);
+});
+await test("The cutter reports media-element playback errors with their cause", async () => {
+  const scope = {
+    fileUrl: "blob:current",
+    media: { currentSrc: "blob:current", error: { code: 4 } },
+    mediaPlaying: true,
+    raf: 9,
+    message: { textContent: "" },
+    cancelAnimationFrame(id) { assert.equal(id, 9); },
+    updatePausedPosition() { scope.updated = true; },
+  };
+  const marker = 'media.addEventListener("error", () => {',
+    handlerBody = block(cut, cut.indexOf("{", cut.indexOf(marker)));
+  bind(
+    scope,
+    fn(cut, "mediaErrorDetail") +
+      `;globalThis.errorHandler = () => ${handlerBody};`,
+  );
+  scope.errorHandler();
+  assert.equal(scope.mediaPlaying, false);
+  assert.match(scope.message.textContent, /format n’est pas pris en charge/);
+  assert.equal(scope.updated, true);
+});
+await test("Groove reuses white-noise buffers for repeated pad sounds", async () => {
+  let created = 0;
+  const makeContext = () => ({
+    sampleRate: 1000,
+    createBuffer(channels, length, sampleRate) {
+      created++;
+      assert.equal(channels, 1);
+      assert.equal(sampleRate, 1000);
+      return { length, getChannelData: () => new Float32Array(length) };
+    },
+  });
+  const context = makeContext(),
+    otherContext = makeContext();
+  const scope = bind({ noiseBuffers: new WeakMap() }, fn(game, "noiseBufferFor"));
+  const first = scope.noiseBufferFor(context, 0.09);
+  assert.equal(scope.noiseBufferFor(context, 0.09), first);
+  assert.notEqual(scope.noiseBufferFor(context, 0.11), first);
+  assert.notEqual(scope.noiseBufferFor(otherContext, 0.09), first);
+  assert.equal(created, 3);
 });
 console.log(
   JSON.stringify({ passed: results.length, tests: results }, null, 2),

@@ -207,6 +207,28 @@
     position.textContent = timeText(t);
     draw(t);
   }
+  function playbackErrorMessage(error) {
+    if (error?.name === "NotAllowedError")
+      return "Le navigateur a refusé la lecture. Appuie de nouveau sur le bouton pour l’autoriser.";
+    if (error?.name === "NotSupportedError" || error?.code === 4)
+      return "Ce format ne peut pas être lu par le navigateur. Essaie un fichier WAV ou MP3 compatible.";
+    if (error?.name === "AbortError" || error?.code === 1)
+      return "La lecture a été interrompue avant de démarrer. Réessaie.";
+    if (error?.code === 2)
+      return "La lecture a échoué à cause d’une erreur de lecture des données audio.";
+    if (error?.code === 3)
+      return "Le navigateur n’a pas pu décoder le fichier pour la lecture.";
+    return "La lecture a échoué. Vérifie le format du fichier et la sortie audio.";
+  }
+  function mediaErrorDetail(error) {
+    const details = {
+      1: "la lecture a été interrompue",
+      2: "une erreur de lecture des données audio est survenue",
+      3: "le navigateur n’a pas pu décoder le fichier",
+      4: "ce format n’est pas pris en charge par le navigateur",
+    };
+    return details[error?.code] || "une erreur audio inconnue est survenue";
+  }
   media.addEventListener("pause", () => {
     if (!mediaPlaying) return;
     mediaPlaying = false;
@@ -217,6 +239,14 @@
     if (!mediaPlaying) return;
     mediaPlaying = false;
     cancelAnimationFrame(raf);
+    updatePausedPosition();
+  });
+  media.addEventListener("error", () => {
+    if (!fileUrl || (media.currentSrc && media.currentSrc !== fileUrl)) return;
+    mediaPlaying = false;
+    cancelAnimationFrame(raf);
+    message.textContent =
+      "La lecture du fichier audio a échoué : " + mediaErrorDetail(media.error) + ".";
     updatePausedPosition();
   });
   function releaseCurrentAudio() {
@@ -327,15 +357,7 @@
       };
       tick();
     } catch (e) {
-      const reason =
-        e?.name === "NotAllowedError"
-          ? "Le navigateur a refusé la lecture. Appuie de nouveau sur le bouton pour l’autoriser."
-          : e?.name === "NotSupportedError"
-            ? "Ce format ne peut pas être lu par le navigateur. Essaie un fichier WAV ou MP3 compatible."
-            : e?.name === "AbortError"
-              ? "La lecture a été interrompue avant de démarrer. Réessaie."
-              : "La lecture a échoué. Vérifie le format du fichier et la sortie audio.";
-      message.textContent = reason;
+      message.textContent = playbackErrorMessage(e);
     }
   }
   function makeTestTone() {
@@ -405,7 +427,8 @@
     }
   }
   function normalizationGainForPeak(peak) {
-    return peak > 0 ? 0.89125094 / peak : 1;
+    if (!Number.isFinite(peak) || peak < 0.001) return 1;
+    return Math.min(0.89125094 / peak, 4);
   }
   function exportWav() {
     if (!buffer) return;
@@ -469,7 +492,13 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     const channelNote = exportChannelNote(buffer.numberOfChannels);
     message.textContent =
-      "WAV exporté, crête normalisée à −1 dBFS." +
+      (peak < 0.001
+        ? "WAV exporté · extrait presque silencieux, aucun gain n’a été ajouté."
+        : normalizationGain >= 4
+          ? "WAV exporté · gain automatique limité à +12 dB."
+          : normalizationGain > 1
+            ? "WAV exporté, crête normalisée à −1 dBFS."
+            : "WAV exporté · niveau abaissé pour rester sous −1 dBFS.") +
       channelNote +
       " Tu peux l’importer dans Logic Pro.";
   }

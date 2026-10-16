@@ -25,6 +25,11 @@
   });
   const clampFx = (key, value) =>
     Math.max(FX_RANGES[key][0], Math.min(FX_RANGES[key][1], value));
+  function restoreLengthPreference(select, savedLength) {
+    const value = String(savedLength);
+    if (Array.from(select.options).some((option) => option.value === value))
+      select.value = value;
+  }
   function restoreFx(target, saved) {
     if (!saved) return;
     for (const key of Object.keys(FX_RANGES)) {
@@ -219,8 +224,13 @@
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) throw Error("Web Audio n’est pas disponible dans ce navigateur");
     ctx = new AC();
-    ctx.addEventListener("statechange", () => {
-      if ((playing || starting) && ctx && ctx.state !== "running") {
+    ctx.addEventListener("statechange", (event) => {
+      const audioContext = event.currentTarget;
+      if (
+        audioContext === ctx &&
+        (playing || starting) &&
+        audioContext.state !== "running"
+      ) {
         stop();
         status.textContent =
           "Lecture arrêtée après une interruption audio · appuie sur Jouer pour reprendre.";
@@ -420,24 +430,30 @@
 
   async function importSample(track, file) {
     if (track.removing) return;
-    try {
-      core.checkAudioFile(file);
-    } catch (error) {
-      status.textContent = error.message;
-      return;
-    }
     track.load.begin();
     const requestId = ++track.importSequence,
       storageEpoch = track.storageEpoch;
+    try {
+      core.checkAudioFile(file);
+    } catch (error) {
+      track.latestImportFailure = {
+        requestId,
+        name: file.name,
+        message: error.message || "fichier audio invalide",
+      };
+      status.textContent =
+        `Import de ${file.name} impossible : ${track.latestImportFailure.message} Le sample déjà sauvegardé est conservé.`;
+      return;
+    }
     stop();
     status.textContent = "Chargement de " + file.name + "…";
     let decoded;
     try {
       await core.checkAudioFileDuration(file);
-      if (track.removing || storageEpoch !== track.storageEpoch) return;
+      if (storageEpoch !== track.storageEpoch) return;
       const ac = ensureAudio(),
         bytes = await file.arrayBuffer();
-      if (track.removing || storageEpoch !== track.storageEpoch) return;
+      if (storageEpoch !== track.storageEpoch) return;
       try {
         decoded = await ac.decodeAudioData(bytes);
       } catch (error) {
@@ -445,13 +461,29 @@
           throw new Error("Le navigateur n’a pas pu décoder ce fichier audio.");
         throw error;
       }
-      if (track.removing || storageEpoch !== track.storageEpoch) return;
+      if (storageEpoch !== track.storageEpoch) return;
       if (decoded.duration > 120)
         throw new Error("La durée décodée dépasse la limite de 2 minutes.");
     } catch (error) {
-      if (!track.removing && requestId === track.importSequence)
+      if (
+        storageEpoch === track.storageEpoch &&
+        requestId === track.importSequence
+      ) {
+        track.latestImportFailure = {
+          requestId,
+          name: file.name,
+          message: error.message || "sample illisible",
+        };
         status.textContent =
-          `Import de ${file.name} impossible : ${error.message || "sample illisible"} Le sample déjà sauvegardé est conservé.`;
+          `Import de ${file.name} impossible : ${track.latestImportFailure.message} Le sample déjà sauvegardé est conservé.`;
+      }
+      return;
+    }
+    if (requestId !== track.importSequence) {
+      const laterFailure = track.latestImportFailure;
+      if (laterFailure && laterFailure.requestId > requestId)
+        status.textContent =
+          `Import de ${laterFailure.name} impossible : ${laterFailure.message} L’import précédent de ${file.name} a été annulé ; le sample déjà sauvegardé est conservé.`;
       return;
     }
     const entry = {
@@ -462,13 +494,12 @@
     try {
       await track.write(async () => {
         if (
-          track.removing ||
           storageEpoch !== track.storageEpoch ||
           requestId < track.committedImportSequence
         )
           return;
         await dbPut(track.id, entry);
-        if (track.removing || storageEpoch !== track.storageEpoch) return;
+        if (storageEpoch !== track.storageEpoch) return;
         // A newer import can start while IndexedDB is committing this one.
         // Reflect every successful write before the next queued write begins;
         // a later successful import will then replace both DB and memory.
@@ -480,7 +511,7 @@
         updateLabel(track, track._label);
       });
     } catch (error) {
-      if (track.removing || storageEpoch !== track.storageEpoch) return;
+      if (storageEpoch !== track.storageEpoch) return;
       status.textContent =
         `Enregistrement de ${file.name} impossible ; le sample précédent est conservé.`;
       persist.textContent =
@@ -488,26 +519,36 @@
       return;
     }
     if (
-      track.removing ||
       storageEpoch !== track.storageEpoch ||
       requestId !== track.committedImportSequence
     )
       return;
+    const laterFailure = track.latestImportFailure;
+    if (laterFailure && laterFailure.requestId > requestId) {
+      status.textContent =
+        `Import de ${laterFailure.name} impossible : ${laterFailure.message} Le sample ${file.name}, importé juste avant, a finalement été sauvegardé.`;
+      persist.textContent =
+        `Le sample ${file.name} a été sauvegardé sur cet appareil. La tentative d’import plus récente a échoué.`;
+      return;
+    }
     status.textContent = "Sample chargé et sauvegardé";
     persist.textContent =
       "Samples et réglages conservés automatiquement sur cet appareil.";
   }
   async function removeSample(track) {
     if (track.removing) return;
-    track.load.begin();
-    track.storageEpoch++;
-    track.committedImportSequence = ++track.importSequence;
     track.removing = true;
     track._input.disabled = true;
     updateLabel(track, track._label);
     stop();
     try {
-      await track.write(() => dbDelete(track.id));
+      await track.write(async () => {
+        await dbDelete(track.id);
+        // Invalidate reads and imports only after IndexedDB confirms deletion.
+        track.load.begin();
+        track.storageEpoch++;
+        track.committedImportSequence = ++track.importSequence;
+      });
       track.buffer = null;
       track.fileName = "";
       track.hasStoredSample = false;
@@ -516,7 +557,7 @@
       saveState();
     } catch (error) {
       persist.textContent =
-        "Suppression impossible dans le stockage du navigateur. Le sample est conservé ; réessaie.";
+        "Suppression impossible dans le stockage du navigateur. Le sample est conservé ; les imports déjà en cours peuvent se terminer. Réessaie.";
       status.textContent = "Sample non supprimé";
     } finally {
       track.removing = false;
@@ -1005,7 +1046,12 @@
     }
   });
   $("#clear").addEventListener("click", () => {
-    if (!window.confirm("Effacer les pas des huit pistes ?")) return;
+    if (
+      !window.confirm(
+        "Effacer tous les pas, visibles et masqués, des huit pistes ?",
+      )
+    )
+      return;
     tracks.forEach((t) => t.steps.fill(false));
     drawSteps();
     saveState();
@@ -1037,8 +1083,7 @@
         Math.max(60, Math.min(160, Number(saved.tempo) || 100)),
       );
     bpm.textContent = tempo.value;
-    if ([8, 16].includes(Number(saved.length)))
-      length.value = String(saved.length);
+    restoreLengthPreference(length, saved.length);
     swing.checked = Boolean(saved.swing);
     if (Array.isArray(saved.tracks))
       saved.tracks.forEach((item, i) => {

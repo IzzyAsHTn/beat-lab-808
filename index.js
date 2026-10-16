@@ -99,6 +99,18 @@
       return false;
     }
   }
+  function schedulePatternSave() {
+    clearTimeout(patternSaveTimer);
+    patternSaveTimer = setTimeout(() => {
+      patternSaveTimer = 0;
+      savePattern();
+    }, 180);
+  }
+  function flushPatternSave() {
+    clearTimeout(patternSaveTimer);
+    patternSaveTimer = 0;
+    savePattern();
+  }
   function tuningReference(id) {
     const industrial = kit.value === "industrial";
     return {
@@ -184,10 +196,20 @@
     ).join("");
   grid.append(head);
   const voiceGains = {};
-  let masterLimiter = null;
+  const activeSources = new Set();
+  let masterLimiter = null,
+    transportGain = null;
   function audible(track) {
     const hasSolo = tracks.some((item) => item.solo);
     return !track.muted && (!hasSolo || track.solo);
+  }
+  function trackSource(source) {
+    activeSources.add(source);
+    const onEnded = () => activeSources.delete(source);
+    if (typeof source.addEventListener === "function")
+      source.addEventListener("ended", onEnded, { once: true });
+    else source.onended = onEnded;
+    return source;
   }
   function voiceOutput(id) {
     if (!voiceGains[id]) {
@@ -306,8 +328,9 @@
       track.tuning = Number(tune.value);
       updateTuningSlider(tune);
       refreshTuningLabels();
-      savePattern();
+      schedulePatternSave();
     });
+    tune.addEventListener("change", flushPatternSave);
     row.append(label);
     cells[ti] = [];
     const stepRow = document.createElement("div");
@@ -343,19 +366,23 @@
   window.BeatLabGrid(cells, () => 16);
   tempo.addEventListener("input", () => {
     bpm.textContent = tempo.value;
-    savePattern();
+    schedulePatternSave();
   });
+  tempo.addEventListener("change", flushPatternSave);
+  window.addEventListener("pagehide", flushPatternSave);
   swing.addEventListener("change", savePattern);
   kit.addEventListener("change", () => {
     refreshTuningLabels();
     savePattern();
-    if (playing && kit.value === "industrial" && !industrialClapBuffer) {
+    if (ctx && kit.value === "industrial" && !industrialClapBuffer) {
       status.textContent = "Chargement du clap…";
       loadIndustrialClap()
         .then((buffer) => {
-          if (playing && kit.value === "industrial")
+          if (kit.value === "industrial")
             status.textContent = buffer
-              ? "En lecture"
+              ? playing
+                ? "En lecture"
+                : "Clap industriel prêt"
               : "Clap de secours synthétique actif · fichier industriel indisponible";
         });
     }
@@ -366,6 +393,7 @@
     step = 0,
     nextTime = 0,
     timer = null,
+    patternSaveTimer = 0,
     cachedNoise = null,
     clapRoomImpulse = null,
     clapRoomNode = null,
@@ -381,6 +409,7 @@
     if (ctx && ctx.state === "closed") {
       Object.keys(voiceGains).forEach((id) => delete voiceGains[id]);
       masterLimiter = null;
+      transportGain = null;
       cachedNoise = null;
       clapRoomImpulse = null;
       clapRoomNode = null;
@@ -397,9 +426,16 @@
     masterLimiter.ratio.value = 20;
     masterLimiter.attack.value = 0.003;
     masterLimiter.release.value = 0.12;
-    masterLimiter.connect(ctx.destination);
-    ctx.addEventListener("statechange", () => {
-      if (ctx && ctx.state !== "running" && (playing || starting)) {
+    transportGain = ctx.createGain();
+    transportGain.gain.value = 1;
+    masterLimiter.connect(transportGain).connect(ctx.destination);
+    ctx.addEventListener("statechange", (event) => {
+      const audioContext = event.currentTarget;
+      if (
+        audioContext === ctx &&
+        audioContext.state !== "running" &&
+        (playing || starting)
+      ) {
         stop();
         status.textContent =
           "Lecture arrêtée après une interruption audio · appuie sur Jouer pour reprendre.";
@@ -466,9 +502,9 @@
     const ratio = Math.pow(2, (track.tuning || 0) / 12),
       bus = voiceOutput(track.id),
       room = getClapRoom(),
-      frequency = 1450 * ratio;
+      frequency = tuningReference("clap") * ratio;
     [0, 0.013, 0.026, 0.039].forEach((offset, index) => {
-      const source = ctx.createBufferSource(),
+      const source = trackSource(ctx.createBufferSource()),
         filter = ctx.createBiquadFilter(),
         envelope = ctx.createGain(),
         level = [0.46, 0.38, 0.31, 0.25][index];
@@ -496,7 +532,7 @@
     return clapRoomNode;
   }
   function industrialClap(t, track) {
-    const source = ctx.createBufferSource(),
+    const source = trackSource(ctx.createBufferSource()),
       gain = ctx.createGain(),
       ratio = Math.pow(2, (track.tuning || 0) / 12);
     source.buffer = industrialClapBuffer;
@@ -515,7 +551,7 @@
   function kick(t) {
     const industrial = kit.value === "industrial",
       ratio = Math.pow(2, trackById.get("kick").tuning / 12),
-      osc = ctx.createOscillator(),
+      osc = trackSource(ctx.createOscillator()),
       gain = ctx.createGain();
     osc.type = industrial ? "triangle" : "sine";
     osc.frequency.setValueAtTime((industrial ? 96 : 155) * ratio, t);
@@ -546,7 +582,7 @@
     osc.start(t);
     osc.stop(t + (industrial ? 0.44 : 0.5));
     if (industrial) {
-      const click = ctx.createBufferSource(),
+      const click = trackSource(ctx.createBufferSource()),
         metal = ctx.createBiquadFilter(),
         cg = ctx.createGain();
       click.buffer = noiseBuffer();
@@ -564,7 +600,7 @@
     const industrial = kit.value === "industrial",
       track = tracks.find((item) => item.id === kind),
       ratio = Math.pow(2, (track?.tuning || 0) / 12),
-      source = ctx.createBufferSource(),
+      source = trackSource(ctx.createBufferSource()),
       filter = ctx.createBiquadFilter(),
       gain = ctx.createGain();
     source.buffer = noiseBuffer();
@@ -580,7 +616,7 @@
       );
       source.start(t);
       source.stop(t + (industrial ? 0.28 : 0.2));
-      const osc = ctx.createOscillator(),
+      const osc = trackSource(ctx.createOscillator()),
         tone = ctx.createGain();
       osc.type = "triangle";
       osc.frequency.setValueAtTime((industrial ? 188 : 190) * ratio, t);
@@ -595,7 +631,7 @@
       osc.start(t);
       osc.stop(t + (industrial ? 0.19 : 0.13));
       if (industrial) {
-        const ring = ctx.createOscillator(),
+        const ring = trackSource(ctx.createOscillator()),
           ringFilter = ctx.createBiquadFilter(),
           ringGain = ctx.createGain();
         ring.type = "square";
@@ -608,36 +644,6 @@
         ring.connect(ringFilter).connect(ringGain).connect(voiceOutput(kind));
         ring.start(t);
         ring.stop(t + 0.08);
-      }
-    } else if (kind === "clap") {
-      filter.type = "bandpass";
-      filter.frequency.value = (industrial ? 1850 : 1700) * ratio;
-      filter.Q.value = industrial ? 1.5 : 0.7;
-      (industrial ? [0, 0.018, 0.052, 0.11] : [0, 0.022, 0.047, 0.075]).forEach(
-        (offset, i) => {
-          gain.gain.setValueAtTime(0.001, t + offset);
-          gain.gain.linearRampToValueAtTime(
-            (industrial ? 0.38 : 0.3) / (i + 1),
-            t + offset + 0.003,
-          );
-          gain.gain.exponentialRampToValueAtTime(
-            0.001,
-            t + offset + (industrial ? 0.032 : 0.025),
-          );
-        },
-      );
-      source.start(t);
-      source.stop(t + (industrial ? 0.17 : 0.18));
-      if (industrial) {
-        const snap = ctx.createOscillator(),
-          sg = ctx.createGain();
-        snap.type = "square";
-        snap.frequency.value = 1450 * ratio;
-        sg.gain.setValueAtTime(0.055, t);
-        sg.gain.exponentialRampToValueAtTime(0.001, t + 0.035);
-        snap.connect(sg).connect(voiceOutput(kind));
-        snap.start(t);
-        snap.stop(t + 0.04);
       }
     } else {
       const open = kind === "openHat";
@@ -655,7 +661,7 @@
       source.start(t);
       source.stop(t + (open ? 0.4 : 0.09));
       if (industrial) {
-        const tick = ctx.createOscillator(),
+        const tick = trackSource(ctx.createOscillator()),
           tg = ctx.createGain();
         tick.type = "square";
         tick.frequency.value = (open ? 6700 : 8400) * ratio;
@@ -672,7 +678,7 @@
     if (!track) return;
     const industrial = kit.value === "industrial",
       ratio = Math.pow(2, (track.tuning || 0) / 12),
-      osc = ctx.createOscillator(),
+      osc = trackSource(ctx.createOscillator()),
       gain = ctx.createGain(),
       start = high ? (industrial ? 280 : 220) : industrial ? 175 : 145,
       end = high ? (industrial ? 158 : 125) : industrial ? 78 : 68,
@@ -686,7 +692,7 @@
     osc.start(t);
     osc.stop(t + duration + 0.01);
     if (industrial) {
-      const grit = ctx.createBufferSource(),
+      const grit = trackSource(ctx.createBufferSource()),
         band = ctx.createBiquadFilter(),
         g = ctx.createGain();
       grit.buffer = noiseBuffer();
@@ -708,7 +714,7 @@
     tone.type = "bandpass";
     tone.frequency.value = (industrial ? 2150 : 1450) * ratio;
     tone.Q.value = industrial ? 3.1 : 1.2;
-    mix.gain.setValueAtTime(industrial ? 0.2 : 0.2, t);
+    mix.gain.setValueAtTime(0.2, t);
     mix.gain.exponentialRampToValueAtTime(0.001, t + (industrial ? 0.4 : 0.25));
     tone.connect(mix).connect(voiceOutput("cowbell"));
     (industrial
@@ -724,7 +730,7 @@
     )
       .map(([frequency, type]) => [frequency * ratio, type])
       .forEach(([freq, type]) => {
-        const osc = ctx.createOscillator();
+        const osc = trackSource(ctx.createOscillator());
         osc.type = type;
         osc.frequency.setValueAtTime(freq, t);
         osc.connect(tone);
@@ -767,6 +773,18 @@
       step = (step + 1) % 16;
     }
   }
+  function setTransportGain(value, fadeSeconds = 0, delaySeconds = 0) {
+    if (!ctx || ctx.state === "closed" || !transportGain) return;
+    const param = transportGain.gain,
+      now = ctx.currentTime;
+    param.cancelScheduledValues(now);
+    param.setValueAtTime(param.value, now);
+    if (delaySeconds > 0)
+      param.setValueAtTime(param.value, now + delaySeconds);
+    if (fadeSeconds > 0)
+      param.linearRampToValueAtTime(value, now + delaySeconds + fadeSeconds);
+    else param.setValueAtTime(value, now + delaySeconds);
+  }
   async function start() {
     if (playing || starting) return;
     starting = true;
@@ -782,6 +800,7 @@
         await loadIndustrialClap();
       }
       if (token !== startVersion) return;
+      setTransportGain(1, 0.005, 0.01);
       playing = true;
       step = 0;
       nextTime = ctx.currentTime + 0.05;
@@ -807,6 +826,14 @@
     starting = false;
     playButton.disabled = false;
     playing = false;
+    setTransportGain(0, 0.005);
+    const stopAt = ctx && ctx.state !== "closed" ? ctx.currentTime + 0.006 : 0;
+    activeSources.forEach((source) => {
+      try {
+        source.stop(stopAt);
+      } catch (error) {}
+    });
+    activeSources.clear();
     clearInterval(timer);
     timer = null;
     paintTimers.forEach(clearTimeout);
