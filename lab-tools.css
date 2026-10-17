@@ -43,6 +43,14 @@ body[data-tool] .grid.keyboard-navigation .pad:focus {
 body[data-tool] .status {
   font-size: 13px;
 }
+body[data-tool="sequencer"] .noscript-message {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #ff8058;
+  border-radius: 8px;
+  color: #f4f0df;
+  background: #562d2a;
+}
 body[data-tool] :is(.seq, .gridwrap) {
   overscroll-behavior-x: contain;
   scrollbar-color: #8d8d7d #20201b;
@@ -366,7 +374,6 @@ body[data-tool] .pad:active { transform: scale(0.94); }
   body[data-tool="sequencer"] .fxcontrol output {
     margin-left: 0;
   }
-  body[data-tool="sequencer"] .trackinfo .trackname,
   body[data-tool="drums"] .voice-name {
     visibility: hidden;
   }

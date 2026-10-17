@@ -43,11 +43,24 @@ assert.match(mobileStyles, /\.desktop-mobile-copy[^\{]*\{\s*display:\s*none/);
 assert.match(mobileStyles, /\.mobile-context\s*\{\s*display:\s*block/);
 const sequencerHtml = fs.readFileSync(path.join(root, "sequencer.html"), "utf8");
 assert.match(sequencerHtml, /id="grid"[\s\S]*?role="grid"/);
+assert.equal([...sequencerHtml.matchAll(/role="status"/g)].length, 2);
+assert.match(sequencerHtml, /id="persist"[^>]*aria-live="off"/);
+assert.match(sequencerHtml, /id="tempo"[^>]*aria-valuetext="100 BPM"/);
+assert.match(sequencerHtml, /<span aria-hidden="true">▶<\/span>\s*<span id="play-label">Jouer<\/span>/);
+for (const id of [
+  "desktop-fxhint", "desktop-tip", "desktop-foot", "mobile-fxhint",
+  "mobile-grid-help", "mobile-tip", "mobile-foot",
+]) assert.match(sequencerHtml, new RegExp(`id="${id}"`));
+assert.match(sequencerHtml, /<noscript>[\s\S]*JavaScript[\s\S]*<\/noscript>/);
 const sequencerScript = fs.readFileSync(path.join(root, "sequencer.js"), "utf8");
 assert.match(sequencerScript, /b\.hidden\s*=\s*hidden/);
 assert.match(sequencerScript, /cell\.hidden\s*=\s*si\s*>=\s*Number\(length\.value\)/);
 assert.match(sequencerScript, /Promise\.allSettled\(tracks\.map\(\(t\)\s*=>\s*dbGet\(t\.id\)\)\)/);
 assert.match(sequencerScript, /Les pas masqués sont conservés/);
+assert.match(sequencerScript, /copy\.className = "mobile-context__copy"/);
+assert.match(sequencerScript, /title\.classList\.add\("mobile-sr-only"\)/);
+assert.match(sequencerScript, /tempo\.setAttribute\("aria-valuetext", tempo\.value \+ " BPM"\)/);
+assert.match(sequencerScript, /playLabel\.textContent = "Arrêter"/);
 const toolsStyles = fs.readFileSync(path.join(root, "lab-tools.css"), "utf8");
 assert.match(toolsStyles, /body\[data-tool="sequencer"\] \[hidden\]\s*\{\s*display:\s*none\s*!important/);
 const cutterHtml = fs.readFileSync(path.join(root, "samples.html"), "utf8");

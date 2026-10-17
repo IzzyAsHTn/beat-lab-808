@@ -66,10 +66,29 @@
     length = $("#length"),
     swing = $("#swing"),
     play = $("#play"),
+    playLabel = $("#play-label"),
     status = $("#status"),
     persist = $("#persist"),
     lengthAnnouncement = $("#length-status"),
     cells = [];
+  function populateMobileGuidance() {
+    [
+      ["desktop-fxhint", "mobile-fxhint"],
+      ["grid-help", "mobile-grid-help"],
+      ["desktop-tip", "mobile-tip"],
+      ["desktop-foot", "mobile-foot"],
+    ].forEach(([sourceId, targetId]) => {
+      const source = $("#" + sourceId),
+        target = $("#" + targetId);
+      if (!source || !target) return;
+      const copy = source.cloneNode(true);
+      copy.removeAttribute("id");
+      copy.className = "mobile-context__copy";
+      if (sourceId === "grid-help") copy.setAttribute("aria-hidden", "true");
+      target.replaceChildren(copy);
+    });
+  }
+  populateMobileGuidance();
   let dbPromise = null,
     ctx = null,
     master = null,
@@ -404,10 +423,15 @@
           })),
         }),
       );
-      if (persist.textContent.startsWith("Impossible de sauvegarder"))
+      if (persist.textContent.startsWith("Impossible de sauvegarder")) {
         persist.textContent =
           "Samples et réglages conservés automatiquement sur cet appareil.";
+        if (status.textContent.startsWith("Impossible de sauvegarder"))
+          status.textContent = "Réglages sauvegardés";
+      }
     } catch (_) {
+      status.textContent =
+        "Impossible de sauvegarder les réglages : le stockage local est plein ou désactivé.";
       persist.textContent =
         "Impossible de sauvegarder les réglages : le stockage local du navigateur est plein ou désactivé.";
     }
@@ -746,6 +770,7 @@
     label.setAttribute("aria-colindex", "1");
     const title = document.createElement("div");
     title.className = "trackname";
+    title.classList.add("mobile-sr-only");
     title.textContent = String(ti + 1).padStart(2, "0") + " · " + track.name;
     const trackinfo = document.createElement("div");
     trackinfo.className = "trackinfo";
@@ -1026,7 +1051,7 @@
     const token = transport.begin();
     starting = true;
     play.disabled = true;
-    play.textContent = "Activation audio…";
+    playLabel.textContent = "Activation audio…";
     try {
       const ac = ensureAudio();
       await ac.resume();
@@ -1034,12 +1059,12 @@
       playing = true;
       step = 0;
       nextTime = ac.currentTime + 0.04;
-      play.textContent = "■ Arrêter";
+      playLabel.textContent = "Arrêter";
       status.textContent = "En lecture";
       schedulerId = setInterval(scheduler, 20);
     } catch (error) {
       if (transport.current(token)) {
-        play.textContent = "▶ Jouer";
+        playLabel.textContent = "Jouer";
         status.textContent = "Audio indisponible : " + error.message;
       }
     } finally {
@@ -1065,7 +1090,7 @@
     paintTimers.forEach(clearTimeout);
     paintTimers.clear();
     cells.forEach((row) => row.forEach((b) => b.classList.remove("current")));
-    play.textContent = "▶ Jouer";
+    playLabel.textContent = "Jouer";
     if (status && status.textContent === "En lecture")
       status.textContent = "À l’arrêt";
   }
@@ -1091,6 +1116,7 @@
   });
   tempo.addEventListener("input", () => {
     bpm.textContent = tempo.value;
+    tempo.setAttribute("aria-valuetext", tempo.value + " BPM");
     saveState();
   });
   length.addEventListener("change", () => {
@@ -1115,6 +1141,7 @@
         Math.max(60, Math.min(160, Number(saved.tempo) || 100)),
       );
     bpm.textContent = tempo.value;
+    tempo.setAttribute("aria-valuetext", tempo.value + " BPM");
     restoreLengthPreference(length, saved.length);
     swing.checked = Boolean(saved.swing);
     if (Array.isArray(saved.tracks))

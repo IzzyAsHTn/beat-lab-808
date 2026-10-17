@@ -635,11 +635,62 @@ await test("Restoration uses the blob filename when the record name is missing",
     if (fails) assert.match(s.track.fileName, /impossible à restaurer/);
   }
 });
+await test("Mobile guidance is copied from one accessible desktop source", async () => {
+  function element(id) {
+    return {
+      id,
+      className: "source-class",
+      attributes: { id },
+      removeAttribute(name) { delete this.attributes[name]; },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      cloneNode() { return element(this.id); },
+      replaceChildren(child) { this.child = child; },
+    };
+  }
+  const elements = new Map();
+  for (const id of [
+    "desktop-fxhint", "mobile-fxhint", "grid-help", "mobile-grid-help",
+    "desktop-tip", "mobile-tip", "desktop-foot", "mobile-foot",
+  ]) elements.set("#" + id, element(id));
+  const s = bind(
+    { $: (selector) => elements.get(selector) },
+    fn(seq, "populateMobileGuidance"),
+  );
+  s.populateMobileGuidance();
+  for (const id of [
+    "mobile-fxhint", "mobile-grid-help", "mobile-tip", "mobile-foot",
+  ]) {
+    const copy = elements.get("#" + id).child;
+    assert.equal(copy.className, "mobile-context__copy");
+    assert.equal(copy.attributes.id, undefined);
+  }
+  assert.equal(
+    elements.get("#mobile-grid-help").child.attributes["aria-hidden"],
+    "true",
+  );
+  assert.equal(elements.get("#grid-help").attributes.id, "grid-help");
+});
+await test("Sequencer storage-setting errors remain announced in the primary status", async () => {
+  const s = {
+    clearTimeout() {}, saveId: 1, STATE_KEY: "test",
+    localStorage: { setItem() { throw Error("storage denied"); } },
+    tempo: { value: "100" }, length: { value: "16" }, swing: { checked: false },
+    tracks: [], status: { textContent: "" }, persist: { textContent: "" },
+  };
+  bind(s, fn(seq, "saveNow"));
+  s.saveNow();
+  assert.match(s.status.textContent, /Impossible de sauvegarder les réglages/);
+  assert.match(s.persist.textContent, /stockage local du navigateur/);
+  s.localStorage.setItem = () => {};
+  s.saveNow();
+  assert.equal(s.status.textContent, "Réglages sauvegardés");
+  assert.match(s.persist.textContent, /conservés automatiquement/);
+});
 function startupRestorationFixture() {
   const s = trackFixture();
   Object.assign(s, {
     tracks: [s.track], STATE_KEY: "test", localStorage: { getItem: () => "{}" },
-    tempo: { value: "100" }, bpm: {}, length: { value: "16", options: [{ value: "16" }] },
+    tempo: { value: "100", setAttribute(name, value) { this[name] = value; } }, bpm: {}, length: { value: "16", options: [{ value: "16" }] },
     swing: {}, drawSteps() {}, syncTrackToggles() {},
     formatPercent() {}, formatPan() {}, updateMixSlider() {}, updateFxSlider() {},
     restoreFx() {}, openDB: async () => ({}),
@@ -652,6 +703,7 @@ function startupRestorationFixture() {
 await test("Sequencer startup reports failed decodes globally and keeps records removable", async () => {
   const s = startupRestorationFixture();
   await s.restore();
+  assert.equal(s.tempo["aria-valuetext"], "100 BPM");
   assert.match(s.status.textContent, /restauration impossible pour Kick/);
   assert.doesNotMatch(s.status.textContent, /Prêt/);
   assert.match(s.persist.textContent, /restaur/);
@@ -1707,6 +1759,7 @@ function transportFixture() {
     tracks: [{ buffer: {} }],
     status: {},
     play: {},
+    playLabel: { textContent: "Jouer" },
     ensureAudio: () => ({ resume: () => resume.promise, currentTime: 0 }),
     scheduler() {},
     setInterval: () => {
@@ -1729,8 +1782,10 @@ await test("Two starts while audio resumes create one interval; stop cancels it"
   assert.equal(s.play.disabled, true);
   resume.resolve();
   await Promise.all([a, b]);
+  assert.equal(s.playLabel.textContent, "Arrêter");
   assert.equal(timers.size, 1);
   s.stop();
+  assert.equal(s.playLabel.textContent, "Jouer");
   assert.equal(timers.size, 0);
   assert.equal(s.play.disabled, false);
 });

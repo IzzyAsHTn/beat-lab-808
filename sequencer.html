@@ -7,8 +7,8 @@
     <title>Sample Sequencer — Beat Lab 808</title>
     <link rel="stylesheet" href="sequencer.css?v=halo-soft-file-picker-1">
     <link rel="stylesheet" href="lab-shared.css?v=c7888927cd27">
-    <link rel="stylesheet" href="lab-tools.css?v=sequencer-control-tint-2_8pct">
-    <link rel="stylesheet" href="mobile-compact.css?v=57b9fd03a8f0">
+    <link rel="stylesheet" href="lab-tools.css?v=ddd3f132080e">
+    <link rel="stylesheet" href="mobile-compact.css?v=312657f05077">
     <link rel="stylesheet" href="interaction-accents.css?v=4427be973feb">
     <meta
       name="description"
@@ -89,15 +89,29 @@
           Par fichier : 50 Mo et 2 minutes maximum.
         </p>
         <section class="card">
+          <noscript>
+            <p class="noscript-message">
+              Le Sample Sequencer a besoin de JavaScript pour charger les sons
+              et jouer les motifs.
+            </p>
+          </noscript>
           <div class="row">
-            <button id="play" class="btn primary" type="button">▶ Jouer</button
+            <button id="play" class="btn primary" type="button">
+              <span aria-hidden="true">▶</span>
+              <span id="play-label">Jouer</span></button
             ><button id="clear" class="btn" type="button">
               Effacer les pas</button
             ><label class="field"
               >Tempo
-              <input id="tempo" type="range" min="60" max="160" value="100"><b
+              <input
+                id="tempo"
+                type="range"
+                min="60"
+                max="160"
+                value="100"
+                aria-valuetext="100 BPM"><b
                 id="bpm"
-                >100</b
+              >100</b
               >
               BPM</label
             ><label class="field"
@@ -112,17 +126,17 @@
               >Chargement des réglages…</span
             >
           </div>
-          <p id="persist" class="persist" role="status" aria-live="polite">
+          <p id="persist" class="persist" aria-live="off">
             Sauvegarde des sons et réglages sur cet appareil…
           </p>
-          <div class="fxhint desktop-mobile-copy">
+          <div class="fxhint desktop-mobile-copy" id="desktop-fxhint">
             Les boutons <strong>Mute</strong> et <strong>Solo</strong> et les
             curseurs <strong>Volume</strong> et
             <strong>Panoramique</strong> sont visibles sous chaque piste. Ils
             agissent sur son sample et se sauvegardent avec le motif. Ouvre « ⚡
             FX · filtre / saturation / écho / réverb » pour ses effets.
           </div>
-          <p id="grid-help" class="grid-help mobile-sr-only">
+          <p id="grid-help" class="grid-help mobile-sr-only desktop-mobile-copy">
             Grille : Tab pour entrer ou sortir, flèches pour te déplacer, Espace
             ou Entrée pour activer un pas. PageUp/PageDown déplacent de quatre
             pas. Sur petit écran, fais défiler la grille horizontalement.
@@ -145,14 +159,14 @@
               aria-colcount="17"
             ></div>
           </section>
-          <div class="tip desktop-mobile-copy">
+          <div class="tip desktop-mobile-copy" id="desktop-tip">
             <strong>Pour commencer :</strong> charge un son sur une piste,
             active quelques pas sur sa ligne, puis lance la lecture. Choisis 8
             pas pour une boucle courte ou 16 pour la prolonger. En mode 8 pas,
             les pas 9 à 16 restent mémorisés.
           </div>
         </section>
-        <p class="foot desktop-mobile-copy">
+        <p class="foot desktop-mobile-copy" id="desktop-foot">
           Tes sons restent dans le stockage privé de ce navigateur ; ils ne
           sont pas envoyés à GitHub. Pour les retrouver, utilise le même
           navigateur et le même appareil. Effacer les données du site dans le
@@ -162,35 +176,15 @@
         <details class="mobile-context">
           <summary>Raccourcis, commandes et conseils</summary>
           <div class="mobile-context__content">
-            <p>
-              Les boutons Mute et Solo et les curseurs Volume et Panoramique
-              sont visibles sous chaque piste. Ils agissent sur son sample et
-              se sauvegardent avec le motif. Ouvre « ⚡ FX · filtre / saturation
-              / écho / réverb » pour ses effets.
-            </p>
-            <p>
-              Grille : Tab pour entrer ou sortir, flèches pour te déplacer,
-              Espace ou Entrée pour activer un pas. PageUp/PageDown déplacent de
-              quatre pas. Sur petit écran, fais défiler la grille horizontalement.
-            </p>
-            <p>
-              Pour commencer : charge un son sur une piste, active quelques pas
-              sur sa ligne, puis lance la lecture. Choisis 8 pas pour une boucle
-              courte ou 16 pour la prolonger. En mode 8 pas, les pas 9 à 16
-              restent mémorisés.
-            </p>
+            <div id="mobile-fxhint"></div>
+            <div id="mobile-grid-help"></div>
+            <div id="mobile-tip"></div>
           </div>
         </details>
         <details class="mobile-context">
           <summary>Stockage et confidentialité</summary>
           <div class="mobile-context__content">
-            <p>
-              Tes sons restent dans le stockage privé de ce navigateur ; ils ne
-              sont pas envoyés à GitHub. Pour les retrouver, utilise le même
-              navigateur et le même appareil. Effacer les données du site dans
-              le navigateur supprime aussi ces sons et les réglages sauvegardés.
-              Garde une copie de tes sons.
-            </p>
+            <div id="mobile-foot"></div>
           </div>
         </details>
       </main>
@@ -209,6 +203,6 @@
     </div>
     <script src="lab-core.js?v=9a82659e4759"></script>
     <script src="lab-grid.js?v=b8f8b235a083"></script>
-    <script src="sequencer.js?v=14f87c7e7079"></script>
+    <script src="sequencer.js?v=903ae36a8e0e"></script>
   </body>
 </html>

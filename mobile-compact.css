@@ -42,6 +42,8 @@ body[data-tool] .mobile-intro { display: none; }
   body[data-tool] .mobile-context__content { padding: 0 12px 10px; }
   body[data-tool] .mobile-context__content p { margin: 8px 0 0; }
   body[data-tool] .mobile-context__content p:first-child { margin-top: 0; }
+  body[data-tool] .mobile-context__copy { margin: 8px 0 0; }
+  body[data-tool] .mobile-context__copy:first-child { margin-top: 0; }
   body[data-tool] .mobile-sr-only {
     position: absolute;
     width: 1px;
